@@ -222,14 +222,38 @@ function activeG(){ return S.groups.find(g=>g.id===S.activeGroup); }
 function cityLang(){ return CITY_LANG[S.cityKey]||"local language"; }
 
 // ── API ───────────────────────────────────────────────────────────────────────
+function saveApiKey(){
+  var k = (document.getElementById('apiKeyInput')||{}).value||'';
+  k = k.trim();
+  if(k) localStorage.setItem('buddy_api_key', k);
+  else localStorage.removeItem('buddy_api_key');
+  var status = document.getElementById('apiKeyStatus');
+  if(status){
+    status.textContent = k ? '✓ Key saved — AI features enabled' : 'Key cleared';
+    status.style.color = k ? 'var(--live)' : 'var(--muted)';
+  }
+}
+
+
+function getApiKey(){
+  return localStorage.getItem('buddy_api_key')||'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';
+}
+
 async function callClaude(prompt, maxTokens=1000){
+  const key = getApiKey();
+  const headers = {"Content-Type":"application/json","anthropic-version":"2023-06-01"};
+  if(key) headers["x-api-key"] = key;
   const res = await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
-    headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01"},
+    headers:headers,
     body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})
   });
   const d = await res.json();
-  if(!res.ok){ const msg=(d&&d.error&&d.error.message)||"HTTP "+res.status; throw new Error(msg); }
+  if(!res.ok){
+    const msg = (d&&d.error&&d.error.message)||"HTTP "+res.status;
+    if(res.status===401) throw new Error("No API key — go to the You tab, scroll to the bottom, and paste your Anthropic API key");
+    throw new Error(msg);
+  }
   return (d.content||[]).map(i=>i.text||"").join("").replace(/```json|```/g,"").trim();
 }
 
@@ -1079,6 +1103,15 @@ function renderYou(){
       <button onclick="createGroup()" style="background:var(--amber);border:none;border-radius:999px;padding:0 18px;color:var(--night);font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">+ Create</button>
     </div>
 
+    <div style="background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--cream);margin-bottom:4px;">🔑 Anthropic API Key</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.5;">Required for AI features when self-hosted. Get one free at <a href="https://console.anthropic.com" target="_blank" style="color:var(--garnet);">console.anthropic.com</a></div>
+      <div style="display:flex;gap:8px;">
+        <input id="apiKeyInput" type="password" placeholder="sk-ant-..." value="" + escH(getApiKey()) + "" style="flex:1;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:9px 14px;color:var(--cream);font-size:12.5px;"/>
+        <button onclick="saveApiKey()" style="background:linear-gradient(90deg,var(--sap),var(--garnet));border:none;border-radius:999px;padding:0 16px;color:#FFFFFF;font-weight:700;font-size:12.5px;cursor:pointer;flex-shrink:0;">Save</button>
+      </div>
+      <div id="apiKeyStatus" style="margin-top:8px;font-size:11px;color:" + (getApiKey()?"var(--live)":"var(--muted)") + ";">" + (getApiKey()?"✓ Key saved — AI features enabled":"No key — AI needs a key when self-hosted") + "</div>
+    </div>
     <div style="background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;">
       <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;font-weight:700;">Powered by</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.9;">🤖 Claude Sonnet 4.6<br/>🗺 OpenStreetMap & CARTO dark tiles<br/>🌐 Anthropic API · real-time translation<br/><span style="font-size:10.5px;">Deploy to Google Play via Capacitor.js TWA</span></div>
