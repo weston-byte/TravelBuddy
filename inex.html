@@ -76,6 +76,9 @@ input,textarea{font-family:inherit;outline:none}
 .d3{animation:dotP 1.4s ease-in-out .4s infinite}
 @media(prefers-reduced-motion:reduce){*{animation:none!important}}
 button:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+[style*="font-weight:700"],[style*="font-weight:800"]{font-family:Syne,sans-serif;}
+[style*='font-weight:700'],[style*='font-weight:800']{}
+
 input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:var(--line);cursor:pointer}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--garnet);cursor:pointer}
 input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--garnet);border:none}
@@ -254,20 +257,20 @@ function renderOnboard(){
       <span style="color:var(--line);font-size:10px;">▸</span>
     </div>
     <div class="slideUp" style="text-align:center;margin-bottom:6px;">
-      <div style="font-family:Syne,sans-serif;font-weight:800;font-size:46px;color:var(--cream);line-height:1;">Buddy</div>
-      <div style="font-family:Syne,sans-serif;font-size:12px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-top:5px;">AI Travel Companion</div>
+      <div style="font-weight:800;font-size:46px;color:var(--cream);line-height:1;">Buddy</div>
+      <div style="font-size:12px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-top:5px;">AI Travel Companion</div>
     </div>
     <div class="slideUp" style="font-size:12px;color:var(--garnet);margin-bottom:30px;letter-spacing:.06em;animation-delay:.08s;">Pick a city. Build your night.</div>
 
     ${[["🗺","Real interactive maps","OpenStreetMap with live venue pins"],["🌐","AI Translator","Speech-to-text, auto-detects language"],["✨","Vibe matching","Tell Buddy what you want tonight"],["👟","Step counter","Device motion integration"],["✉","Group travel","Chat & share spots with your crew"]].map(([ic,ti,de],i)=>`
       <div class="slideUp" style="display:flex;gap:12px;align-items:flex-start;margin-bottom:11px;width:100%;animation-delay:${.14+i*.06}s;">
         <div style="width:34px;height:34px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;flex-shrink:0;font-size:15px;">${ic}</div>
-        <div><div style="font-family:Syne,sans-serif;font-weight:700;font-size:13px;color:var(--cream);">${ti}</div><div style="font-size:11px;color:var(--muted);margin-top:1px;">${de}</div></div>
+        <div><div style="font-weight:700;font-size:13px;color:var(--cream);">${ti}</div><div style="font-size:11px;color:var(--muted);margin-top:1px;">${de}</div></div>
       </div>`).join("")}
 
     <div style="width:100%;margin-top:10px;">
       <input id="nameInput" placeholder="Your name (optional)" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px 14px;color:var(--cream);font-size:14px;margin-bottom:10px;"/>
-      <button onclick="startApp()" style="width:100%;padding:15px 0;border-radius:14px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-family:Syne,sans-serif;font-weight:800;font-size:16px;cursor:pointer;letter-spacing:.02em;">Let's go →</button>
+      <button onclick="startApp()" style="width:100%;padding:15px 0;border-radius:14px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-weight:800;font-size:16px;cursor:pointer;letter-spacing:.02em;">Let's go →</button>
     </div>
     <div style="margin-top:14px;font-size:10px;color:var(--mdim);letter-spacing:.14em;text-transform:uppercase;">Buddy v2</div>
   </div>`;
@@ -289,10 +292,10 @@ function renderCityLoading(){
   const m = CITY_META[S.cityLoading] || {};
   return `<div class="fadeIn" style="height:100vh;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;background:var(--night);">
     <div style="font-size:52px;margin-bottom:14px;">${m.flag||"🌍"}</div>
-    <div style="font-family:Syne,sans-serif;font-weight:800;font-size:22px;color:var(--cream);margin-bottom:6px;">${m.name||"..."}</div>
+    <div style="font-weight:800;font-size:22px;color:var(--cream);margin-bottom:6px;">${m.name||"..."}</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:24px;">${S.cityLoadError ? "Couldn't load — check connection" : "Building your city guide…"}</div>
     ${S.cityLoadError
-      ? `<button onclick="retryCityLoad()" style="padding:11px 28px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-family:Syne,sans-serif;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:10px;">Retry</button>
+      ? `<button onclick="retryCityLoad()" style="padding:11px 28px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-weight:700;font-size:14px;cursor:pointer;margin-bottom:10px;">Retry</button>
          <button onclick="cancelCityLoad()" style="padding:8px 20px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--muted);font-family:inherit;font-size:13px;cursor:pointer;">← Back</button>`
       : `<div style="display:flex;gap:8px;">
           <span class="d1" style="width:9px;height:9px;border-radius:50%;background:var(--garnet);display:block;"></span>
@@ -312,7 +315,7 @@ function renderPicker(){
   return `<div class="fadeIn" style="height:100vh;height:100dvh;display:flex;flex-direction:column;background:var(--night);">
     <div style="padding:16px 18px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:var(--panel);">
       <div>
-        <div style="font-family:Syne,sans-serif;font-weight:800;font-size:18px;color:var(--cream);">Choose a city</div>
+        <div style="font-weight:800;font-size:18px;color:var(--cream);">Choose a city</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">AI generates a guide on first visit</div>
       </div>
       <button onclick="S.showPicker=false;r()" style="background:none;border:none;color:var(--muted);font-size:28px;line-height:1;padding:0 4px;">×</button>
@@ -334,7 +337,7 @@ function renderPicker(){
                   ${curr ? "<span style='font-size:12px;color:var(--garnet);'>✦</span>" : ""}
                   ${!loaded&&!curr ? "<span style='font-size:8px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 5px;letter-spacing:.04em;'>AI</span>" : ""}
                 </div>
-                <div style="font-family:Syne,sans-serif;font-weight:700;font-size:12.5px;color:var(--cream);line-height:1.2;">${m.name}</div>
+                <div style="font-weight:700;font-size:12.5px;color:var(--cream);line-height:1.2;">${m.name}</div>
                 <div style="font-size:10px;color:var(--muted);margin-top:2px;">${m.country}</div>
               </div>`;
             }).join("")}
@@ -509,7 +512,7 @@ function renderTranslator(){
   return `<div class="fadeIn" style="height:100vh;height:100dvh;display:flex;flex-direction:column;background:var(--night);">
     <div style="padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:var(--panel);">
       <div>
-        <div style="font-family:Syne,sans-serif;font-weight:800;font-size:18px;color:var(--cream);">🌐 Translator</div>
+        <div style="font-weight:800;font-size:18px;color:var(--cream);">🌐 Translator</div>
         <div style="font-size:11px;color:var(--muted);">English ↔ ${lang}${m.name?" · "+m.name:""} · auto-detect</div>
       </div>
       <button onclick="S.transOpen=false;stopListening();r()" style="background:none;border:none;color:var(--muted);font-size:28px;line-height:1;padding:0 4px;">×</button>
@@ -603,13 +606,13 @@ function renderMain(){
         <span style="font-size:10px;color:var(--muted);white-space:nowrap;">${stepsKm} km</span>
         <span style="font-size:9px;color:var(--mdim);white-space:nowrap;">${S.stepsActive?"· tracking":"· tap"}</span>
       </div>
-      <button onclick="S.transOpen=true;r()" style="background:linear-gradient(90deg,var(--sap),var(--garnet));border:none;border-radius:999px;padding:4px 11px;color:var(--cream);font-family:Syne,sans-serif;font-weight:700;font-size:11px;white-space:nowrap;cursor:pointer;flex-shrink:0;">🌐 Translate</button>
+      <button onclick="S.transOpen=true;r()" style="background:linear-gradient(90deg,var(--sap),var(--garnet));border:none;border-radius:999px;padding:4px 11px;color:var(--cream);font-weight:700;font-size:11px;white-space:nowrap;cursor:pointer;flex-shrink:0;">🌐 Translate</button>
     </div>
 
     <!-- HEADER -->
     <div style="padding:11px 16px 9px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--panel) 0%,var(--night) 100%);flex-shrink:0;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-family:Syne,sans-serif;font-weight:800;font-size:20px;color:var(--cream);">Buddy <span style="color:var(--garnet);">✦</span></div>
+        <div style="font-weight:800;font-size:20px;color:var(--cream);">Buddy <span style="color:var(--garnet);">✦</span></div>
         <button onclick="S.showPicker=true;r()" style="display:flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid ${hasCity?"var(--garnet)":"var(--line)"};border-radius:999px;padding:6px 13px;cursor:pointer;font-family:inherit;">
           <span style="font-size:14px;">${hasCity?(m.flag||"🌍"):"＋"}</span>
           <span style="font-size:12px;color:var(--cream);font-weight:600;">${hasCity?(m.name||"..."):"New trip"}</span>
@@ -654,9 +657,9 @@ function renderExplore(){
   if(!S.cityKey){
     return `<div class="rise" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:20px;">
       <div style="font-size:48px;margin-bottom:16px;">🗺</div>
-      <div style="font-family:Syne,sans-serif;font-weight:800;font-size:22px;color:var(--cream);margin-bottom:8px;">No trip selected</div>
+      <div style="font-weight:800;font-size:22px;color:var(--cream);margin-bottom:8px;">No trip selected</div>
       <div style="font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.6;">Pick a city to start exploring<br/>venues, vibes & hidden gems.</div>
-      <button onclick="S.showPicker=true;r()" style="padding:13px 28px;border-radius:14px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-family:Syne,sans-serif;font-weight:700;font-size:15px;cursor:pointer;">+ New trip</button>
+      <button onclick="S.showPicker=true;r()" style="padding:13px 28px;border-radius:14px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-weight:700;font-size:15px;cursor:pointer;">+ New trip</button>
     </div>`;
   }
   const shown = shownSpots();
@@ -669,7 +672,7 @@ function renderExplore(){
       </div>
       ${S.vibeResult?`<div class="rise" style="margin-top:10px;">
         <div style="font-size:12.5px;color:var(--amber);margin-bottom:10px;font-style:italic;line-height:1.5;">"${escH(S.vibeResult.summary)}"</div>
-        ${(S.vibeResult.matches||[]).map(match=>{const sp=spots().find(s=>s.id===match.id);if(!sp)return"";return`<div style="background:var(--panel2);border:1px solid var(--garnet);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;"><div style="flex:1;"><div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;color:var(--cream);">${escH(sp.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4;">${escH(match.reason)}</div></div><span style="flex-shrink:0;font-size:9px;background:var(--sap);color:var(--cream);border-radius:999px;padding:3px 8px;font-weight:800;">AI</span></div>`;}).join("")}
+        ${(S.vibeResult.matches||[]).map(match=>{const sp=spots().find(s=>s.id===match.id);if(!sp)return"";return`<div style="background:var(--panel2);border:1px solid var(--garnet);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;"><div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--cream);">${escH(sp.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4;">${escH(match.reason)}</div></div><span style="flex-shrink:0;font-size:9px;background:var(--sap);color:var(--cream);border-radius:999px;padding:3px 8px;font-weight:800;">AI</span></div>`;}).join("")}
         <button onclick="S.vibeResult=null;S.vibeInput='';r()" style="background:none;border:none;color:var(--muted);font-size:11.5px;cursor:pointer;font-family:inherit;padding:2px 0;">clear ×</button>
       </div>`:""}
     </div>
@@ -683,7 +686,7 @@ function renderExplore(){
       const isSaved=S.saved.includes(s.id);
       return `<div onclick="S.openSpot=${isOpen?"null":s.id};r()" style="background:var(--panel);border:1px solid ${ai?"var(--garnet)":"var(--line)"};border-radius:16px;padding:14px;margin-bottom:10px;cursor:pointer;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
-          <div style="flex:1;min-width:0;"><div style="font-family:Syne,sans-serif;font-weight:700;font-size:16px;color:var(--cream);">${escH(s.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${escH(s.type)} · ${escH(s.area)} · ★ ${s.rating}</div></div>
+          <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:16px;color:var(--cream);">${escH(s.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${escH(s.type)} · ${escH(s.area)} · ★ ${s.rating}</div></div>
           <div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">
             <button onclick="event.stopPropagation();shareSpot(${s.id})" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);padding:2px;">⬆</button>
             <button onclick="event.stopPropagation();toggleSave(${s.id})" style="background:none;border:none;cursor:pointer;font-size:18px;color:${isSaved?"var(--amber)":"var(--muted)"};padding:2px;">${isSaved?"♥":"♡"}</button>
@@ -704,9 +707,9 @@ function renderMap(){
   if(!S.cityKey){
     return `<div class="rise" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:20px;">
       <div style="font-size:48px;margin-bottom:16px;">🗺</div>
-      <div style="font-family:Syne,sans-serif;font-weight:800;font-size:20px;color:var(--cream);margin-bottom:8px;">No city loaded</div>
+      <div style="font-weight:800;font-size:20px;color:var(--cream);margin-bottom:8px;">No city loaded</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Select a city to view its interactive map.</div>
-      <button onclick="S.showPicker=true;r()" style="padding:12px 24px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-family:Syne,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">+ New trip</button>
+      <button onclick="S.showPicker=true;r()" style="padding:12px 24px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-weight:700;font-size:14px;cursor:pointer;">+ New trip</button>
     </div>`;
   }
   const tr = spotTypes();
@@ -771,12 +774,12 @@ function placeMapPins(map){
     });
     const marker = L.marker([s.lat,s.lng],{icon}).addTo(map);
     marker.bindPopup(`<div style="min-width:150px;">
-      <div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;margin-bottom:3px;">${escH(s.name)}</div>
+      <div style="font-weight:700;font-size:14px;margin-bottom:3px;">${escH(s.name)}</div>
       <div style="font-size:11px;color:#9A8495;margin-bottom:6px;">${escH(s.type)} · ${escH(s.area)}</div>
       <div style="font-size:12px;line-height:1.45;margin-bottom:8px;">${escH(s.vibe.slice(0,90))}…</div>
       <div style="font-size:11px;color:#9A8495;margin-bottom:8px;">Open ${escH(s.open)} · ${escH(s.price)}</div>
       <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank"
-         style="display:inline-block;background:linear-gradient(90deg,#8E1F36,#C03546);color:#F4E9E3;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;text-decoration:none;font-family:Syne,sans-serif;">Directions ↗</a>
+         style="display:inline-block;background:linear-gradient(90deg,#8E1F36,#C03546);color:#F4E9E3;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;text-decoration:none;">Directions ↗</a>
     </div>`);
     S.mapMarkers.push(marker);
   });
@@ -797,10 +800,10 @@ function renderSaved(){
   if(!S.cityKey) return renderNoCity("Your saved spots will appear here once you select a city.");
   const savedSpots = spots().filter(s=>S.saved.includes(s.id));
   return `<div class="rise">
-    <div style="font-family:Syne,sans-serif;font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Saved spots</div>
+    <div style="font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Saved spots</div>
     ${S.itiResult?`<div class="rise" style="background:var(--panel2);border:1px solid var(--garnet);border-radius:16px;padding:16px;margin-bottom:14px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-        <div style="font-family:Syne,sans-serif;font-weight:800;font-size:15px;color:var(--amber);">✦ ${escH(S.itiResult.title)}</div>
+        <div style="font-weight:800;font-size:15px;color:var(--amber);">✦ ${escH(S.itiResult.title)}</div>
         <span style="font-size:9px;background:var(--sap);color:var(--cream);border-radius:999px;padding:3px 8px;font-weight:800;">AI PLAN</span>
       </div>
       <div style="font-size:12.5px;color:var(--muted);font-style:italic;margin-bottom:14px;line-height:1.5;">${escH(S.itiResult.intro)}</div>
@@ -817,13 +820,13 @@ function renderSaved(){
 ${savedSpots.map(function(s){
       return '<div style="background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:14px;padding:14px;margin-bottom:10px;">'
         +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
-        +'<div><div style="font-family:Syne,sans-serif;font-weight:700;font-size:15px;color:var(--cream);">'+escH(s.name)+'</div>'
+        +'<div><div style="font-weight:700;font-size:15px;color:var(--cream);">'+escH(s.name)+'</div>'
         +'<div style="font-size:12px;color:var(--muted);margin-top:2px;">'+escH(s.type)+' &middot; '+escH(s.area)+' &middot; '+escH(s.open)+'</div>'
         +'</div>'
         +'<button onclick="toggleSave('+s.id+')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;font-family:inherit;margin-left:8px;">remove</button>'
         +'</div></div>';
     }).join("")}
-    ${savedSpots.length>0?`<button onclick="genIti()" ${S.itiLoading?"disabled":""} style="margin-top:6px;width:100%;padding:13px 0;border-radius:12px;border:${S.itiLoading?"1px solid var(--line)":"none"};background:${S.itiLoading?"var(--panel2)":"linear-gradient(90deg,var(--sap),var(--garnet))"};color:${S.itiLoading?"var(--muted)":"var(--cream)"};font-family:Syne,sans-serif;font-weight:700;font-size:14px;cursor:${S.itiLoading?"default":"pointer"};">${S.itiLoading?"Building your night…":"✦ Build tonight's plan from these spots"}</button>`:""}
+    ${savedSpots.length>0?`<button onclick="genIti()" ${S.itiLoading?"disabled":""} style="margin-top:6px;width:100%;padding:13px 0;border-radius:12px;border:${S.itiLoading?"1px solid var(--line)":"none"};background:${S.itiLoading?"var(--panel2)":"linear-gradient(90deg,var(--sap),var(--garnet))"};color:${S.itiLoading?"var(--muted)":"var(--cream)"};font-weight:700;font-size:14px;cursor:${S.itiLoading?"default":"pointer"};">${S.itiLoading?"Building your night…":"✦ Build tonight's plan from these spots"}</button>`:""}
   </div>`;
 }
 
@@ -833,13 +836,13 @@ function renderPlan(){
   const c = cityData();
   const plan = (c&&c.plan) ? c.plan : [];
   return `<div class="rise">
-    <div style="font-family:Syne,sans-serif;font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">3-day plan · ${meta().name||"..."}</div>
+    <div style="font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">3-day plan · ${meta().name||"..."}</div>
     ${plan.map(d=>{
       const customItems = S.customPlanItems[d.day]||[];
       const allItems = [...d.items, ...customItems];
       const adding = S.addingPlan[d.day];
       return `<div style="margin-bottom:20px;">
-        <div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;color:var(--amber);margin-bottom:8px;">${escH(d.day)}</div>
+        <div style="font-weight:700;font-size:14px;color:var(--amber);margin-bottom:8px;">${escH(d.day)}</div>
         ${allItems.map(it=>{
           const isDone = S.done.includes(it.id);
           const isCustom = customItems.some(ci=>ci.id===it.id);
@@ -890,9 +893,9 @@ function renderChat(){
   if(!S.groups.length){
     return `<div class="rise" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:20px;">
       <div style="font-size:44px;margin-bottom:14px;">✉</div>
-      <div style="font-family:Syne,sans-serif;font-weight:800;font-size:20px;color:var(--cream);margin-bottom:8px;">No groups yet</div>
+      <div style="font-weight:800;font-size:20px;color:var(--cream);margin-bottom:8px;">No groups yet</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Create a group in the You tab<br/>to chat with your travel crew.</div>
-      <button onclick="S.tab='you';r()" style="padding:11px 24px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-family:Syne,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Go to You →</button>
+      <button onclick="S.tab='you';r()" style="padding:11px 24px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-weight:700;font-size:14px;cursor:pointer;">Go to You →</button>
     </div>`;
   }
   const g = activeG();
@@ -935,14 +938,14 @@ function renderYou(){
   const doneCount = S.done.filter(d=>!d.endsWith("_removed")).length;
   return `<div class="rise">
     <div style="display:flex;gap:14px;align-items:center;margin-bottom:18px;">
-      <div style="width:56px;height:56px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--garnet),var(--amber));display:grid;place-items:center;font-family:Syne,sans-serif;font-weight:800;font-size:21px;color:var(--night);">${S.username[0]||"B"}</div>
-      <div><div style="font-family:Syne,sans-serif;font-weight:700;font-size:18px;color:var(--cream);">${escH(S.username)}</div><div style="font-size:12px;color:var(--muted);">Night owl · Wine first, techno later</div></div>
+      <div style="width:56px;height:56px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--garnet),var(--amber));display:grid;place-items:center;font-weight:800;font-size:21px;color:var(--night);">${S.username[0]||"B"}</div>
+      <div><div style="font-weight:700;font-size:18px;color:var(--cream);">${escH(S.username)}</div><div style="font-size:12px;color:var(--muted);">Night owl · Wine first, techno later</div></div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;">
       ${[[S.saved.length,"saved"],[doneCount,"plan done"],[S.groups.length,"groups"]].map(([n,l])=>`
         <div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center;">
-          <div style="font-family:Syne,sans-serif;font-weight:800;font-size:22px;color:var(--amber);">${n}</div>
+          <div style="font-weight:800;font-size:22px;color:var(--amber);">${n}</div>
           <div style="font-size:10.5px;color:var(--muted);margin-top:2px;">${l}</div>
         </div>`).join("")}
     </div>
@@ -952,14 +955,14 @@ function renderYou(){
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:24px;">${hasCity?(m.flag||"🌍"):"🗺"}</span>
         <div style="flex:1;min-width:0;">
-          <div style="font-family:Syne,sans-serif;font-weight:700;font-size:16px;color:var(--cream);">${hasCity?(m.name||"..."):"No trip selected"}</div>
+          <div style="font-weight:700;font-size:16px;color:var(--cream);">${hasCity?(m.name||"..."):"No trip selected"}</div>
           ${hasCity?`<div style="font-size:12px;color:var(--muted);">${m.country||""} · ${m.currency||""} · ${m.timezone||""}</div>`:`<div style="font-size:12px;color:var(--muted);">Tap to pick a city</div>`}
         </div>
         <button onclick="S.showPicker=true;r()" style="background:transparent;border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--amber);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">${hasCity?"Switch ▾":"Pick ▾"}</button>
       </div>
     </div>
 
-    <div style="font-family:Syne,sans-serif;font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Your groups</div>
+    <div style="font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Your groups</div>
     ${S.groups.length===0?`<div style="background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:14px;font-size:13px;color:var(--muted);margin-bottom:12px;">No groups yet — create one below.</div>`:""}
     ${S.groups.map(function(g){
       var isActive=S.activeGroup===g.id,isConfirm=S.confirmDel===g.id,isCopied=S.copiedId===g.id;
@@ -969,12 +972,12 @@ function renderYou(){
       }).join('');
       return '<div style="background:var(--panel);border:1px solid '+(isActive?'var(--garnet)':'var(--line)')+';border-radius:16px;padding:14px;margin-bottom:12px;">'
         +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
-        +'<div style="font-family:Syne,sans-serif;font-weight:700;font-size:15px;color:var(--cream);">'+escH(g.name)+' <span style="font-size:11px;color:var(--muted);font-weight:400;">'+g.members.length+' member'+(g.members.length===1?'':'s')+'</span></div>'
+        +'<div style="font-weight:700;font-size:15px;color:var(--cream);">'+escH(g.name)+' <span style="font-size:11px;color:var(--muted);font-weight:400;">'+g.members.length+' member'+(g.members.length===1?'':'s')+'</span></div>'
         +'<button onclick="delGroup('+g.id+')" style="background:'+(isConfirm?'var(--garnet)':'none')+';border:1px solid '+(isConfirm?'var(--garnet)':'var(--line)')+';border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;color:'+(isConfirm?'var(--cream)':'var(--muted)')+';cursor:pointer;font-family:inherit;">'+(isConfirm?'Tap again':'Delete')+'</button>'
         +'</div>'
         +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">'+mems+'</div>'
         +'<div style="display:flex;gap:8px;margin-bottom:12px;"><input id="mem_'+g.id+'" placeholder="Add member..." onkeydown="if(event.key==='Enter')addMember('+g.id+')" style="flex:1;background:var(--night);border:1px solid var(--line);border-radius:999px;padding:8px 14px;color:var(--cream);font-size:12.5px;"/><button onclick="addMember('+g.id+')" style="background:transparent;border:1px solid var(--amber);border-radius:999px;padding:0 16px;color:var(--amber);font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;">Add</button></div>'
-        +'<button onclick="shareGroup('+g.id+')" style="width:100%;padding:12px 0;border-radius:12px;border:none;cursor:pointer;background:'+(isCopied?'var(--live)':'linear-gradient(90deg,var(--sap),var(--garnet))')+';color:'+(isCopied?'var(--night)':'var(--cream)')+';font-family:Syne,sans-serif;font-weight:700;font-size:14px;">'+(isCopied?'Copied!':'Share invite')+'</button>'
+        +'<button onclick="shareGroup('+g.id+')" style="width:100%;padding:12px 0;border-radius:12px;border:none;cursor:pointer;background:'+(isCopied?'var(--live)':'linear-gradient(90deg,var(--sap),var(--garnet))')+';color:'+(isCopied?'var(--night)':'var(--cream)')+';font-weight:700;font-size:14px;">'+(isCopied?'Copied!':'Share invite')+'</button>'
         +'<div style="margin-top:7px;font-size:10.5px;color:var(--mdim);text-align:center;">buddy://join/'+g.code+'</div>'
         +'</div>';
     }).join("")}
@@ -983,7 +986,7 @@ function renderYou(){
           <input id="mem_${g.id}" placeholder="Add member…" onkeydown="if(event.key==='Enter')addMember(${g.id})" style="flex:1;background:var(--night);border:1px solid var(--line);border-radius:999px;padding:8px 14px;color:var(--cream);font-size:12.5px;"/>
           <button onclick="addMember(${g.id})" style="background:transparent;border:1px solid var(--amber);border-radius:999px;padding:0 16px;color:var(--amber);font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;">Add</button>
         </div>
-        <button onclick="shareGroup(${g.id})" style="width:100%;padding:12px 0;border-radius:12px;border:none;cursor:pointer;background:${S.copiedId===g.id?"var(--live)":"linear-gradient(90deg,var(--sap),var(--garnet))"};color:${S.copiedId===g.id?"var(--night)":"var(--cream)"};font-family:Syne,sans-serif;font-weight:700;font-size:14px;">${S.copiedId===g.id?"✓ Copied!":"🔗 Share invite"}</button>
+        <button onclick="shareGroup(${g.id})" style="width:100%;padding:12px 0;border-radius:12px;border:none;cursor:pointer;background:${S.copiedId===g.id?"var(--live)":"linear-gradient(90deg,var(--sap),var(--garnet))"};color:${S.copiedId===g.id?"var(--night)":"var(--cream)"};font-weight:700;font-size:14px;">${S.copiedId===g.id?"✓ Copied!":"🔗 Share invite"}</button>
         <div style="margin-top:7px;font-size:10.5px;color:var(--mdim);text-align:center;">buddy://join/${g.code}</div>
       </div>`).join("")}
 
@@ -1003,9 +1006,9 @@ function renderYou(){
 function renderNoCity(msg){
   return `<div class="rise" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:24px;">
     <div style="font-size:44px;margin-bottom:14px;">✈️</div>
-    <div style="font-family:Syne,sans-serif;font-weight:800;font-size:20px;color:var(--cream);margin-bottom:8px;">No trip selected</div>
+    <div style="font-weight:800;font-size:20px;color:var(--cream);margin-bottom:8px;">No trip selected</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6;">${msg}</div>
-    <button onclick="S.showPicker=true;r()" style="padding:12px 26px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-family:Syne,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">+ New trip</button>
+    <button onclick="S.showPicker=true;r()" style="padding:12px 26px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-weight:700;font-size:14px;cursor:pointer;">+ New trip</button>
   </div>`;
 }
 
