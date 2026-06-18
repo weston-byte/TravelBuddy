@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Buddy — AI Travel Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  margin:0;padding:0;
+  height:100%;
+  background:#05030A;
+  font-family:'Manrope',system-ui,sans-serif;
+  overflow:hidden;
+  position:fixed;
+  width:100%;
+}
+:root{
+  --night:#0C0910;--panel:#1A1020;--panel2:#221428;--panel3:#2A1932;--line:#3D2545;
+  --garnet:#C03546;--sap:#8E1F36;--amber:#E8A14C;--cream:#F4E9E3;
+  --cdim:#C8B8B0;--muted:#9A8495;--mdim:#6A5870;--live:#3FD8C2;--blue:#4A9AB8;
+}
+
+/* The app shell uses dvh so the nav is always visible on mobile */
+.app{
+  width:100%;max-width:430px;
+  position:fixed;
+  top:0;bottom:0;
+  left:50%;transform:translateX(-50%);
+  background:var(--night);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+@media(min-width:460px){
+  .app{top:20px;bottom:20px;border-radius:28px;border:1px solid var(--line);box-shadow:0 30px 80px rgba(140,31,54,.3);}
+}
+
+/* Body scroll area - flex:1 so it takes remaining space after header+nav */
+#mainBody{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  min-height:0; /* critical: allows flex child to shrink below content size */
+}
+
+/* Map body variant - no padding, no scroll, fixed height via flex */
+#mainBody.map-mode{
+  overflow:visible;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+}
+
+button{cursor:pointer;font-family:inherit}
+input,textarea{font-family:inherit;outline:none}
+::-webkit-scrollbar{width:0;height:0}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes slideUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+@keyframes dotP{0%,80%,100%{opacity:0}40%{opacity:1}}
+@keyframes wave{0%,100%{height:5px}50%{height:22px}}
+@keyframes pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}
+.fadeIn{animation:fadeIn .35s ease both}
+.rise{animation:rise .3s ease both}
+.slideUp{animation:slideUp .45s ease both}
+.d1{animation:dotP 1.4s ease-in-out infinite}
+.d2{animation:dotP 1.4s ease-in-out .2s infinite}
+.d3{animation:dotP 1.4s ease-in-out .4s infinite}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+button:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:var(--line);cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--garnet);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--garnet);border:none}
+nav{flex-shrink:0 !important;position:relative;z-index:10;}
+.leaflet-pane{z-index:4 !important;}
+.leaflet-top,.leaflet-bottom{z-index:5 !important;}
+
+
+/* Leaflet dark theme overrides */
+.leaflet-container{background:#1A1020 !important;font-family:'Manrope',sans-serif !important}
+.leaflet-popup-content-wrapper{background:var(--panel2)!important;border:1px solid var(--line)!important;border-radius:12px!important;color:var(--cream)!important;box-shadow:0 8px 24px rgba(0,0,0,.6)!important}
+.leaflet-popup-content{margin:12px 14px!important;line-height:1.5!important}
+.leaflet-popup-tip{background:var(--panel2)!important}
+.leaflet-popup-close-button{color:var(--muted)!important;font-size:18px!important;top:6px!important;right:8px!important}
+.leaflet-control-zoom a{background:var(--panel2)!important;color:var(--cream)!important;border-color:var(--line)!important}
+.leaflet-control-zoom a:hover{background:var(--panel3)!important}
+.leaflet-control-attribution{background:rgba(12,9,16,.75)!important;color:var(--mdim)!important;font-size:9px!important}
+.leaflet-attribution-flag{display:none!important}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+const S = {
+  tab: "explore",
+  started: false,
+  username: "",
+  cityKey: null,          // null = no city selected yet
+  filter: "All",
+  saved: [],
+  done: [],
+  timeIdx: 3,
+  openSpot: null,
+  vibeInput: "",
+  vibeLoading: false,
+  vibeResult: null,
+  itiLoading: false,
+  itiResult: null,
+  groups: [],
+  activeGroup: null,
+  msgs: {},
+  draft: "",
+  newGroup: "",
+  copiedId: null,
+  confirmDel: null,
+  mapInited: false,
+  mapInstance: null,
+  mapMarkers: [],
+  mapFilter: "All",
+  transOpen: false,
+  transListening: false,
+  transHistory: [],
+  transInterim: "",
+  recognition: null,
+  steps: 0,
+  stepsActive: false,
+  lastAccMag: null,
+  stepCooldown: 0,
+  showPicker: false,
+  cityCache: {},
+  cityLoading: null,
+  cityLoadError: false,
+  customPlanItems: {},
+  addingPlan: {},
+  newPlanTime: {},
+  newPlanWhat: {},
+};
+
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+const TIMES = ["18:00","20:00","22:00","00:00","02:00","04:00"];
+
+const CITY_LANG = {
+  tbilisi:"Georgian",lisbon:"Portuguese",cdmx:"Spanish",tokyo:"Japanese",
+  barcelona:"Catalan/Spanish",amsterdam:"Dutch",berlin:"German",paris:"French",
+  rome:"Italian",athens:"Greek",istanbul:"Turkish",budapest:"Hungarian",
+  porto:"Portuguese",copenhagen:"Danish",vienna:"German",prague:"Czech",
+  warsaw:"Polish",buenos_aires:"Spanish",rio:"Portuguese",sao_paulo:"Portuguese",
+  bogota:"Spanish",medellin:"Spanish",lima:"Spanish",santiago:"Spanish",
+  cartagena:"Spanish",havana:"Spanish",marrakech:"Arabic/Darija",cairo:"Arabic",
+  tel_aviv:"Hebrew",dubai:"Arabic",cape_town:"Afrikaans/Zulu",lagos:"Yoruba/English",
+  nairobi:"Swahili/English",osaka:"Japanese",seoul:"Korean",
+  hong_kong:"Cantonese",taipei:"Mandarin",singapore:"English/Mandarin",
+  bangkok:"Thai",bali:"Balinese/Indonesian",hcmc:"Vietnamese",mumbai:"Hindi/Marathi",
+  yerevan:"Armenian",baku:"Azerbaijani",almaty:"Kazakh",new_york:"English",
+  sydney:"English",montreal:"French/English"
+};
+
+const CITY_META = {
+  tbilisi:{name:"Tbilisi",country:"Georgia",flag:"🇬🇪",currency:"GEL (₾)",timezone:"GMT+4",center:[41.6938,44.8015],tagline:"Qvevri wines, sulfur baths & techno cathedrals beneath the stadium"},
+  lisbon:{name:"Lisbon",country:"Portugal",flag:"🇵🇹",currency:"EUR (€)",timezone:"GMT+1",center:[38.7223,-9.1393],tagline:"Fado echoes, petiscos at midnight & the longest Atlantic sunsets"},
+  barcelona:{name:"Barcelona",country:"Spain",flag:"🇪🇸",currency:"EUR (€)",timezone:"GMT+1",center:[41.3851,2.1734],tagline:"Tapas, cava & techno until noon under the Mediterranean sun"},
+  amsterdam:{name:"Amsterdam",country:"Netherlands",flag:"🇳🇱",currency:"EUR (€)",timezone:"GMT+2",center:[52.3676,4.9041],tagline:"Brown cafés, canal-side joints & architecture you'll dream about"},
+  berlin:{name:"Berlin",country:"Germany",flag:"🇩🇪",currency:"EUR (€)",timezone:"GMT+2",center:[52.5200,13.4050],tagline:"The city that invented the 72-hour weekend — Berghain & beyond"},
+  paris:{name:"Paris",country:"France",flag:"🇫🇷",currency:"EUR (€)",timezone:"GMT+2",center:[48.8566,2.3522],tagline:"Natural wine caves, brass brasseries & late nights that last till Tuesday"},
+  rome:{name:"Rome",country:"Italy",flag:"🇮🇹",currency:"EUR (€)",timezone:"GMT+2",center:[41.9028,12.4964],tagline:"Aperitivo hour, Campo de Fiori nights & gelato with ancients overhead"},
+  tokyo:{name:"Tokyo",country:"Japan",flag:"🇯🇵",currency:"JPY (¥)",timezone:"GMT+9",center:[35.6762,139.6503],tagline:"Yakitori smoke, 300 Japanese whiskies & 200 tiny bars in one alley"},
+  osaka:{name:"Osaka",country:"Japan",flag:"🇯🇵",currency:"JPY (¥)",timezone:"GMT+9",center:[34.6937,135.5022],tagline:"Dotonbori neon, standing ramen bars & the takoyaki crawl at midnight"},
+  cdmx:{name:"Mexico City",country:"Mexico",flag:"🇲🇽",currency:"MXN ($)",timezone:"GMT-6",center:[19.4326,-99.1332],tagline:"Tacos al pastor at 2am, mezcal education & world-class cocktail bars"},
+  istanbul:{name:"Istanbul",country:"Turkey",flag:"🇹🇷",currency:"TRY (₺)",timezone:"GMT+3",center:[41.0082,28.9784],tagline:"Raki, meyhane fish dinners & a Bosphorus crossing at 2am"},
+  budapest:{name:"Budapest",country:"Hungary",flag:"🇭🇺",currency:"HUF (Ft)",timezone:"GMT+2",center:[47.4979,19.0402],tagline:"Ruin bars in abandoned courtyards, thermal baths at midnight & Tokaji"},
+  bangkok:{name:"Bangkok",country:"Thailand",flag:"🇹🇭",currency:"THB",timezone:"GMT+7",center:[13.7563,100.5018],tagline:"Rooftop bars above the Chao Phraya, street pad thai & Chinatown Saturdays"},
+  seoul:{name:"Seoul",country:"South Korea",flag:"🇰🇷",currency:"KRW",timezone:"GMT+9",center:[37.5665,126.9780],tagline:"Jjimjilbang saunas, pojangmacha street tents & dawn cold noodle ritual"},
+  dubai:{name:"Dubai",country:"UAE",flag:"🇦🇪",currency:"AED",timezone:"GMT+4",center:[25.2048,55.2708],tagline:"Rooftop pools at midnight, gold souk mornings & a 6-hour Friday brunch"},
+  buenos_aires:{name:"Buenos Aires",country:"Argentina",flag:"🇦🇷",currency:"ARS ($)",timezone:"GMT-3",center:[-34.6037,-58.3816],tagline:"Milonga tango nights, parilla steak at midnight & Malbec from the Andes"},
+  cape_town:{name:"Cape Town",country:"South Africa",flag:"🇿🇦",currency:"ZAR (R)",timezone:"GMT+2",center:[-33.9249,18.4241],tagline:"Wine routes above the ocean, Woodstock street art & the Long Street crawl"},
+  singapore:{name:"Singapore",country:"Singapore",flag:"🇸🇬",currency:"SGD ($)",timezone:"GMT+8",center:[1.3521,103.8198],tagline:"Hawker centres at midnight, Clarke Quay cocktails & extraordinary everything"},
+  sydney:{name:"Sydney",country:"Australia",flag:"🇦🇺",currency:"AUD ($)",timezone:"GMT+11",center:[-33.8688,151.2093],tagline:"Manly Beach sunsets, Surry Hills wine bars & a harbour that lifts everything"},
+  new_york:{name:"New York",country:"USA",flag:"🇺🇸",currency:"USD ($)",timezone:"GMT-5",center:[40.7128,-74.0060],tagline:"Dive bars to Michelin stars in 6 blocks — the city that never sleeps"},
+  montreal:{name:"Montréal",country:"Canada",flag:"🇨🇦",currency:"CAD ($)",timezone:"GMT-5",center:[45.5017,-73.5673],tagline:"Poutine at 3am, Mile End bagels, Jazz Festival & bilingual bar scene"},
+  marrakech:{name:"Marrakech",country:"Morocco",flag:"🇲🇦",currency:"MAD",timezone:"GMT+1",center:[31.6295,-7.9811],tagline:"Riad rooftops, Djemaa el-Fna smoke & mint tea ceremonies at dawn"},
+  athens:{name:"Athens",country:"Greece",flag:"🇬🇷",currency:"EUR (€)",timezone:"GMT+3",center:[37.9838,23.7275],tagline:"Rooftop bars with Acropolis views, mezze & sunrise on the waterfront"},
+  porto:{name:"Porto",country:"Portugal",flag:"🇵🇹",currency:"EUR (€)",timezone:"GMT+1",center:[41.1579,-8.6291],tagline:"Port wine lodges, azulejo tiles & sardine dinners that become dancing"},
+  bali:{name:"Bali",country:"Indonesia",flag:"🇮🇩",currency:"IDR",timezone:"GMT+8",center:[-8.3405,115.0920],tagline:"Rice terrace sunsets, ceremonial kopi & Canggu surf bar nights"},
+  hcmc:{name:"Ho Chi Minh",country:"Vietnam",flag:"🇻🇳",currency:"VND",timezone:"GMT+7",center:[10.8231,106.6297],tagline:"District 1 rooftops, pho at 06:00, Bui Vien & the alley banh mi lady"},
+  nairobi:{name:"Nairobi",country:"Kenya",flag:"🇰🇪",currency:"KES",timezone:"GMT+3",center:[-1.2921,36.8219],tagline:"Lavington rooftop bars, nyama choma & world-class specialty coffee"},
+  yerevan:{name:"Yerevan",country:"Armenia",flag:"🇦🇲",currency:"AMD",timezone:"GMT+4",center:[40.1872,44.5152],tagline:"Brandy that puts cognac to shame & the Cascade rooftop art scene"},
+};
+
+const REGIONS = [
+  {id:"europe",  emoji:"🌍",label:"Europe",       cities:["lisbon","barcelona","amsterdam","berlin","paris","rome","istanbul","budapest","athens","porto","copenhagen","vienna","prague"]},
+  {id:"asia",    emoji:"🌏",label:"Asia",          cities:["tokyo","osaka","seoul","bangkok","singapore","dubai","bali","hcmc","mumbai","hong_kong","taipei"]},
+  {id:"americas",emoji:"🌎",label:"Americas",      cities:["cdmx","buenos_aires","new_york","montreal","rio","bogota","lima","cartagena","havana","new_orleans"]},
+  {id:"caucasus",emoji:"🌏",label:"Caucasus",      cities:["tbilisi","yerevan","baku","almaty"]},
+  {id:"africa",  emoji:"🌍",label:"Africa & ME",   cities:["marrakech","cairo","tel_aviv","cape_town","nairobi","lagos","accra","dubai"]},
+  {id:"oceania", emoji:"🌏",label:"Oceania",       cities:["sydney","melbourne","bali"]},
+];
+
+// ── DATA HELPERS ──────────────────────────────────────────────────────────────
+function cityData(){ return S.cityKey ? (S.cityCache[S.cityKey] || null) : null; }
+function spots(){ return (cityData()||{}).spots || []; }
+function shownSpots(){ const a=spots(); return S.filter==="All"?a:a.filter(s=>s.type===S.filter); }
+function spotTypes(){ const s=new Set(spots().map(x=>x.type)); return ["All",...Array.from(s)]; }
+function meta(){ return S.cityKey ? (CITY_META[S.cityKey]||{}) : {}; }
+function msgs(){ return S.msgs[S.activeGroup]||[]; }
+function activeG(){ return S.groups.find(g=>g.id===S.activeGroup); }
+function cityLang(){ return CITY_LANG[S.cityKey]||"local language"; }
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function callClaude(prompt, maxTokens=1000){
+  const res = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01"},
+    body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})
+  });
+  const d = await res.json();
+  if(!res.ok){ const msg=(d&&d.error&&d.error.message)||"HTTP "+res.status; throw new Error(msg); }
+  return (d.content||[]).map(i=>i.text||"").join("").replace(/```json|```/g,"").trim();
+}
+
+// ── RENDER ENGINE ─────────────────────────────────────────────────────────────
+function r(){
+  const app = document.getElementById("app");
+  if(!app) return;
+
+  if(S.cityLoading){ app.innerHTML = renderCityLoading(); return; }
+  if(!S.started){    app.innerHTML = renderOnboard();     return; }
+  if(S.transOpen){   app.innerHTML = renderTranslator();  return; }
+  if(S.showPicker){  app.innerHTML = renderPicker();      return; }
+
+  app.innerHTML = renderMain();
+  // Apply map-mode class AFTER innerHTML is set
+  const body = document.getElementById("mainBody");
+  if(body) body.className = S.tab === "map" ? "map-mode" : "";
+
+  bindAfterRender();
+}
+
+// ── ONBOARDING ────────────────────────────────────────────────────────────────
+function renderOnboard(){
+  return `<div class="fadeIn" style="height:100vh;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 28px;background:var(--night);overflow-y:auto;">
+    <div style="margin-bottom:16px;display:flex;gap:6px;align-items:center;">
+      <span style="color:var(--line);font-size:10px;">▸</span>
+      <span style="color:var(--garnet);font-size:20px;">✦</span>
+      <span style="color:var(--line);font-size:10px;">▸</span>
+    </div>
+    <div class="slideUp" style="text-align:center;margin-bottom:6px;">
+      <div style="font-family:Syne,sans-serif;font-weight:800;font-size:46px;color:var(--cream);line-height:1;">Buddy</div>
+      <div style="font-family:Syne,sans-serif;font-size:12px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-top:5px;">AI Travel Companion</div>
+    </div>
+    <div class="slideUp" style="font-size:12px;color:var(--garnet);margin-bottom:30px;letter-spacing:.06em;animation-delay:.08s;">Pick a city. Build your night.</div>
+
+    ${[["🗺","Real interactive maps","OpenStreetMap with live venue pins"],["🌐","AI Translator","Speech-to-text, auto-detects language"],["✨","Vibe matching","Tell Buddy what you want tonight"],["👟","Step counter","Device motion integration"],["✉","Group travel","Chat & share spots with your crew"]].map(([ic,ti,de],i)=>`
+      <div class="slideUp" style="display:flex;gap:12px;align-items:flex-start;margin-bottom:11px;width:100%;animation-delay:${.14+i*.06}s;">
+        <div style="width:34px;height:34px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;flex-shrink:0;font-size:15px;">${ic}</div>
+        <div><div style="font-family:Syne,sans-serif;font-weight:700;font-size:13px;color:var(--cream);">${ti}</div><div style="font-size:11px;color:var(--muted);margin-top:1px;">${de}</div></div>
+      </div>`).join("")}
+
+    <div style="width:100%;margin-top:10px;">
+      <input id="nameInput" placeholder="Your name (optional)" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px 14px;color:var(--cream);font-size:14px;margin-bottom:10px;"/>
+      <button onclick="startApp()" style="width:100%;padding:15px 0;border-radius:14px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-family:Syne,sans-serif;font-weight:800;font-size:16px;cursor:pointer;letter-spacing:.02em;">Let's go →</button>
+    </div>
+    <div style="margin-top:14px;font-size:10px;color:var(--mdim);letter-spacing:.14em;text-transform:uppercase;">Buddy v2</div>
+  </div>`;
+}
+
+function startApp(){
+  const n = document.getElementById("nameInput");
+  S.username = (n && n.value.trim()) ? n.value.trim() : "Traveller";
+  S.started = true;
+  if(typeof DeviceMotionEvent !== "undefined" && DeviceMotionEvent.requestPermission){
+    DeviceMotionEvent.requestPermission().catch(()=>{});
+  }
+  window.addEventListener("devicemotion", handleMotion, {passive:true});
+  r();
+}
+
+// ── CITY LOADING ──────────────────────────────────────────────────────────────
+function renderCityLoading(){
+  const m = CITY_META[S.cityLoading] || {};
+  return `<div class="fadeIn" style="height:100vh;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;background:var(--night);">
+    <div style="font-size:52px;margin-bottom:14px;">${m.flag||"🌍"}</div>
+    <div style="font-family:Syne,sans-serif;font-weight:800;font-size:22px;color:var(--cream);margin-bottom:6px;">${m.name||"..."}</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px;">${S.cityLoadError ? "Couldn't load — check connection" : "Building your city guide…"}</div>
+    ${S.cityLoadError
+      ? `<button onclick="retryCityLoad()" style="padding:11px 28px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-family:Syne,sans-serif;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:10px;">Retry</button>
+         <button onclick="cancelCityLoad()" style="padding:8px 20px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--muted);font-family:inherit;font-size:13px;cursor:pointer;">← Back</button>`
+      : `<div style="display:flex;gap:8px;">
+          <span class="d1" style="width:9px;height:9px;border-radius:50%;background:var(--garnet);display:block;"></span>
+          <span class="d2" style="width:9px;height:9px;border-radius:50%;background:var(--amber);display:block;"></span>
+          <span class="d3" style="width:9px;height:9px;border-radius:50%;background:var(--live);display:block;"></span>
+        </div>
+        <div style="margin-top:16px;font-size:11px;color:var(--mdim);letter-spacing:.08em;">~15 seconds · powered by Claude</div>`
+    }
+  </div>`;
+}
+
+function retryCityLoad(){ S.cityLoadError = false; switchCity(S.cityLoading); }
+function cancelCityLoad(){ S.cityLoading = null; S.cityLoadError = false; r(); }
+
+// ── CITY PICKER ───────────────────────────────────────────────────────────────
+function renderPicker(){
+  return `<div class="fadeIn" style="height:100vh;height:100dvh;display:flex;flex-direction:column;background:var(--night);">
+    <div style="padding:16px 18px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:var(--panel);">
+      <div>
+        <div style="font-family:Syne,sans-serif;font-weight:800;font-size:18px;color:var(--cream);">Choose a city</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">AI generates a guide on first visit</div>
+      </div>
+      <button onclick="S.showPicker=false;r()" style="background:none;border:none;color:var(--muted);font-size:28px;line-height:1;padding:0 4px;">×</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 32px;">
+      ${REGIONS.map(reg=>{
+        const validCities = reg.cities.filter(k => CITY_META[k]);
+        if(!validCities.length) return "";
+        return `<div style="margin-bottom:22px;">
+          <div style="font-size:10.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--line);">${reg.emoji} ${reg.label} · ${validCities.length}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+            ${validCities.map(key=>{
+              const m = CITY_META[key];
+              const curr = S.cityKey===key;
+              const loaded = !!S.cityCache[key];
+              return `<div onclick="switchCity('${key}')" style="background:${curr?"var(--panel2)":"var(--panel)"};border:1px solid ${curr?"var(--garnet)":"var(--line)"};border-radius:12px;padding:10px 11px;cursor:pointer;transition:border-color .15s;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+                  <span style="font-size:20px;">${m.flag}</span>
+                  ${curr ? "<span style='font-size:12px;color:var(--garnet);'>✦</span>" : ""}
+                  ${!loaded&&!curr ? "<span style='font-size:8px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 5px;letter-spacing:.04em;'>AI</span>" : ""}
+                </div>
+                <div style="font-family:Syne,sans-serif;font-weight:700;font-size:12.5px;color:var(--cream);line-height:1.2;">${m.name}</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px;">${m.country}</div>
+              </div>`;
+            }).join("")}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>`;
+}
+
+function safeParseJSON(raw){
+  if(!raw) return null;
+  try{ return JSON.parse(raw); } catch(e){}
+  let s = raw.trim();
+  s = s.replace(/,\s*"[^"]*$/, '').replace(/:\s*"[^"]*$/, ':""').replace(/,\s*$/, '');
+  let opens=0, arrs=0;
+  for(const ch of s){if(ch==='{')opens++;else if(ch==='}')opens--;else if(ch==='[')arrs++;else if(ch===']')arrs--;}
+  while(arrs-->0) s+=']'; while(opens-->0) s+='}';
+  try{ return JSON.parse(s); } catch(e){ return null; }
+}
+
+
+const PRE = {
+  tbilisi:{
+    spots:[
+      {id:1,name:"Bassiani",type:"Club",area:"Didube",lat:41.7238,lng:44.7634,vibe:"Cathedral of techno under the football stadium. Dress dark, arrive after 1am.",rating:4.9,heat:[20,35,60,95,100,88],open:"23:00-07:00",price:"40-60 GEL"},
+      {id:2,name:"Khidi",type:"Club",area:"Riverside",lat:41.6895,lng:44.8122,vibe:"Brutalist concrete under the bridge. Three floors, harder sound, easier door.",rating:4.7,heat:[15,30,55,85,92,80],open:"23:00-06:00",price:"30-50 GEL"},
+      {id:3,name:"Mtkvarze",type:"Club",area:"Left Bank",lat:41.6842,lng:44.8215,vibe:"Soviet-era riverside restaurant turned club. Locals favourite for disco nights.",rating:4.6,heat:[25,45,70,88,75,50],open:"22:00-05:00",price:"20-35 GEL"},
+      {id:4,name:"Dadi Wine Bar",type:"Wine",area:"Sololaki",lat:41.6900,lng:44.8044,vibe:"Natural qvevri wines, candlelight, owner pours things not on the list.",rating:4.8,heat:[70,90,85,55,25,10],open:"17:00-01:00",price:"15-30 GEL"},
+      {id:5,name:"8000 Vintages",type:"Wine",area:"Vera",lat:41.6985,lng:44.7912,vibe:"8,000 years of Georgian winemaking on the shelves. Tastings till late.",rating:4.7,heat:[80,85,70,40,15,5],open:"12:00-23:00",price:"25-45 GEL"},
+      {id:6,name:"Vino Underground",type:"Wine",area:"Sololaki",lat:41.6908,lng:44.8038,vibe:"The original natural wine bar, run by the winemakers themselves.",rating:4.8,heat:[75,92,80,50,20,8],open:"15:00-24:00",price:"12-25 GEL"},
+      {id:7,name:"Chreli Abano",type:"Baths",area:"Abanotubani",lat:41.6872,lng:44.8098,vibe:"Blue-tiled sulfur bath. Book a private room and a kisa scrub.",rating:4.6,heat:[60,40,20,8,5,30],open:"08:00-23:00",price:"80-200 GEL"},
+      {id:8,name:"Salobie Bia",type:"Food",area:"Rustaveli",lat:41.6934,lng:44.7980,vibe:"Modern Georgian comfort food. Lobio and mchadi before a long night.",rating:4.7,heat:[85,90,60,25,10,5],open:"12:00-23:00",price:"GEL GEL"},
+      {id:9,name:"Shavi Lomi",type:"Food",area:"Chugureti",lat:41.6958,lng:44.8162,vibe:"Black Lion - courtyard dining, new-wave Georgian kitchen, strong amber wine list.",rating:4.8,heat:[80,88,65,30,12,5],open:"13:00-23:00",price:"GEL GEL GEL"},
+      {id:10,name:"Fabrika",type:"Hang",area:"Chugureti",lat:41.6972,lng:44.8201,vibe:"Soviet factory turned courtyard of bars and studios. Everyone passes through.",rating:4.5,heat:[65,80,90,70,40,15],open:"All day",price:"GEL"},
+      {id:11,name:"Dry Bridge Market",type:"Hang",area:"Dedaena",lat:41.6921,lng:44.8010,vibe:"Soviet cameras, daggers, medals on blankets. Go before noon, haggle gently.",rating:4.4,heat:[40,15,5,0,0,55],open:"09:00-17:00",price:"Free"},
+      {id:12,name:"Narikala Fortress",type:"View",area:"Old Town",lat:41.6845,lng:44.8082,vibe:"Cable car up at golden hour, walk the fortress wall, city lights up below.",rating:4.7,heat:[70,55,30,10,5,20],open:"10:00-23:00",price:"2.5 GEL"},
+    ],
+    plan:[
+      {day:"Day 1 - Old Town & First Glass",items:[{t:"10:00",what:"Walk Sololaki carved balconies",id:"d1a"},{t:"13:00",what:"Lunch at Salobie Bia - lobio and mchadi",id:"d1b"},{t:"16:00",what:"Cable car to Narikala for golden hour",id:"d1c"},{t:"19:00",what:"First qvevri pours at Vino Underground",id:"d1d"},{t:"21:30",what:"Late dinner + amber wine at Dadi",id:"d1e"}]},
+      {day:"Day 2 - Left Bank & Long Night",items:[{t:"11:00",what:"Dry Bridge Market",id:"d2a"},{t:"14:00",what:"Fabrika courtyard",id:"d2b"},{t:"19:00",what:"Dinner at Shavi Lomi",id:"d2c"},{t:"23:30",what:"Warm-up at Mtkvarze",id:"d2d"},{t:"01:30",what:"Bassiani until sunrise",id:"d2e"}]},
+      {day:"Day 3 - Recovery",items:[{t:"12:00",what:"Sulfur bath at Chreli Abano",id:"d3a"},{t:"14:30",what:"Khinkali in Abanotubani",id:"d3b"},{t:"17:00",what:"Tasting flight at 8000 Vintages",id:"d3c"},{t:"20:00",what:"Last toast over the Mtkvari",id:"d3d"}]},
+    ],
+  },
+  lisbon:{
+    spots:[
+      {id:1,name:"Park Bar",type:"Bar",area:"Bairro Alto",lat:38.7157,lng:-9.1451,vibe:"Rooftop on a car park. Best sundowner in Lisbon - queue before 19:00.",rating:4.7,heat:[28,92,75,38,14,4],open:"12:00-02:00",price:"EUR EUR"},
+      {id:2,name:"Pensao Amor",type:"Bar",area:"Cais do Sodre",lat:38.7072,lng:-9.1438,vibe:"Former brothel turned late bar. Books, taxidermy, velvet - before Pink Street.",rating:4.6,heat:[18,35,68,88,92,65],open:"18:00-04:00",price:"EUR EUR"},
+      {id:3,name:"A Cevicheria",type:"Food",area:"Principe Real",lat:38.7185,lng:-9.1492,vibe:"Giant octopus on the ceiling. Creative seafood - book a week ahead.",rating:4.8,heat:[55,92,78,28,5,0],open:"12:30-23:00",price:"EUR EUR EUR"},
+      {id:4,name:"Tasca do Chico",type:"Fado",area:"Alfama",lat:38.7123,lng:-9.1341,vibe:"Eight tables, one guitar, authentic fado. Thu-Sun only, reserve ahead.",rating:4.9,heat:[52,88,80,42,14,0],open:"20:00-01:00",price:"EUR EUR EUR"},
+      {id:5,name:"Miradouro da Graca",type:"View",area:"Graca",lat:38.7192,lng:-9.1285,vibe:"Locals favourite viewpoint - no hordes, just a kiosk and the city lit gold.",rating:4.7,heat:[78,62,28,10,5,5],open:"Always open",price:"Free"},
+      {id:6,name:"LX Factory",type:"Hang",area:"Alcantara",lat:38.7040,lng:-9.1768,vibe:"Sunday industrial market under the bridge. Vintage, music, best bifanas.",rating:4.5,heat:[28,18,8,0,0,60],open:"Sun 10:00-18:00",price:"Free"},
+      {id:7,name:"Time Out Market",type:"Food",area:"Cais do Sodre",lat:38.7065,lng:-9.1447,vibe:"Best chefs under one roof. Go at 13:00 or after 22:00.",rating:4.5,heat:[82,90,70,55,25,5],open:"10:00-02:00",price:"EUR EUR"},
+    ],
+    plan:[
+      {day:"Day 1 - Alfama & First Night",items:[{t:"10:00",what:"Miradouro da Graca before the crowds",id:"l1a"},{t:"13:00",what:"Time Out Market - tuna tartare",id:"l1b"},{t:"19:00",what:"Golden hour at Park Bar rooftop",id:"l1d"},{t:"21:30",what:"Fado at Tasca do Chico",id:"l1e"}]},
+      {day:"Day 2 - Markets & Pink Street",items:[{t:"10:00",what:"LX Factory Sunday Market",id:"l2a"},{t:"14:00",what:"A Cevicheria for the octopus",id:"l2b"},{t:"23:00",what:"Pensao Amor then Pink Street",id:"l2d"}]},
+      {day:"Day 3 - Views & Departure",items:[{t:"11:00",what:"Tram 28 through Alfama",id:"l3a"},{t:"16:30",what:"Last glass overlooking the Tagus",id:"l3b"}]},
+    ],
+  },
+  tokyo:{
+    spots:[
+      {id:1,name:"Bar High Five",type:"Bar",area:"Ginza",lat:35.6695,lng:139.7649,vibe:"Eight seats, Hidetsugu Ueno behind the bar. Asia's best. Reservation essential.",rating:5.0,heat:[15,52,85,80,50,20],open:"17:00-01:00",price:"JPY JPY JPY JPY"},
+      {id:2,name:"Golden Gai",type:"Hang",area:"Shinjuku",lat:35.6938,lng:139.7035,vibe:"200 bars in an alley, each holding 8 people. Pick a door.",rating:4.8,heat:[18,45,78,92,88,60],open:"18:00-05:00",price:"JPY JPY"},
+      {id:3,name:"Omoide Yokocho",type:"Food",area:"Shinjuku",lat:35.6933,lng:139.6998,vibe:"Memory Lane - lantern-lit yakitori smoke since 1945. Counter seat, Sapporo.",rating:4.7,heat:[62,88,82,62,35,10],open:"17:00-00:00",price:"JPY JPY"},
+      {id:4,name:"Zoetrope",type:"Whisky",area:"Shinjuku",lat:35.6930,lng:139.7025,vibe:"Standing bar, 300+ Japanese whiskies. Say what you like, trust the pour.",rating:4.8,heat:[38,72,82,68,38,12],open:"17:00-00:00",price:"JPY JPY JPY"},
+      {id:5,name:"Fuglen Tokyo",type:"Bar",area:"Tomigaya",lat:35.6712,lng:139.6918,vibe:"Oslo coffee by day, Scandinavian cocktails by night. Natural wine weekends.",rating:4.7,heat:[72,80,72,52,28,8],open:"08:00-01:00",price:"JPY JPY"},
+      {id:6,name:"Contact Tokyo",type:"Club",area:"Daikanyama",lat:35.6488,lng:139.7026,vibe:"Two floors, impeccable sound, house and techno till 05:00.",rating:4.7,heat:[5,12,45,82,92,72],open:"22:00-05:00",price:"2000-3000 JPY"},
+      {id:7,name:"Nakameguro Canal",type:"View",area:"Nakameguro",lat:35.6438,lng:139.6993,vibe:"Walk the canal after dark - lanterns, boutiques, cocktail bars.",rating:4.7,heat:[68,82,62,32,14,4],open:"Always open",price:"Free"},
+      {id:8,name:"New York Bar",type:"Bar",area:"Shinjuku",lat:35.6892,lng:139.6929,vibe:"52nd floor, Park Hyatt, jazz trio, whole city below. The Lost in Translation bar.",rating:4.6,heat:[45,78,88,70,38,12],open:"17:00-01:00",price:"JPY JPY JPY JPY"},
+    ],
+    plan:[
+      {day:"Day 1 - Neighbourhoods & Night",items:[{t:"09:00",what:"Yanaka wander - temples and cats",id:"t1a"},{t:"13:00",what:"Omoide Yokocho yakitori lunch",id:"t1b"},{t:"16:30",what:"Nakameguro canal at golden hour",id:"t1c"},{t:"22:00",what:"Golden Gai - pick any door",id:"t1e"}]},
+      {day:"Day 2 - High & Low Tokyo",items:[{t:"17:00",what:"Zoetrope whisky bar",id:"t2b"},{t:"20:00",what:"Bar High Five in Ginza",id:"t2c"},{t:"22:30",what:"New York Bar 52nd floor",id:"t2e"}]},
+      {day:"Day 3 - Techno Till Dawn",items:[{t:"10:00",what:"Tsukiji Outer Market - tuna sashimi",id:"t3a"},{t:"19:00",what:"Dinner in Shinjuku",id:"t3c"},{t:"23:00",what:"Contact Tokyo until sunrise",id:"t3d"}]},
+    ],
+  },
+  barcelona:{
+    spots:[
+      {id:1,name:"Bar Marsella",type:"Bar",area:"El Raval",lat:41.3793,lng:2.1726,vibe:"Barcelona's oldest bar, opened 1820. Absinthe, cobwebs, clouded mirrors.",rating:4.7,heat:[35,60,80,85,70,40],open:"22:00-02:30",price:"EUR EUR"},
+      {id:2,name:"El Xampanyet",type:"Bar",area:"Born",lat:41.3845,lng:2.1820,vibe:"Cava bar by the Picasso Museum. House cava, patatas bravas, shoulder to shoulder.",rating:4.7,heat:[65,88,75,35,10,0],open:"12:00-23:00",price:"EUR"},
+      {id:3,name:"Sala Apolo",type:"Club",area:"El Raval",lat:41.3748,lng:2.1697,vibe:"Art Deco ballroom turned club. Nitsa on Fridays is a techno institution.",rating:4.7,heat:[8,20,55,88,95,75],open:"00:00-06:00",price:"12-18 EUR"},
+      {id:4,name:"Barceloneta Beach",type:"View",area:"Barceloneta",lat:41.3774,lng:2.1906,vibe:"5am empty sand, the sea black. Or noon with a beer and the city in swimwear.",rating:4.5,heat:[72,68,55,25,10,55],open:"Always open",price:"Free"},
+      {id:5,name:"Bar Calders",type:"Hang",area:"Sant Antoni",lat:41.3782,lng:2.1618,vibe:"The terrace that defines Sant Antoni evenings. Vermouth, no hurry.",rating:4.6,heat:[40,75,65,30,10,5],open:"09:00-02:00",price:"EUR"},
+      {id:6,name:"La Pepita",type:"Food",area:"Gracia",lat:41.4008,lng:2.1572,vibe:"Pastel-tiled pintxos bar. The truffle mushroom toast is why you come.",rating:4.6,heat:[60,88,72,30,8,0],open:"13:00-23:00",price:"EUR EUR"},
+    ],
+    plan:[
+      {day:"Day 1 - Born & Raval",items:[{t:"11:00",what:"El Xampanyet cava near Picasso Museum",id:"b1a"},{t:"14:00",what:"La Pepita - truffle toast",id:"b1b"},{t:"19:00",what:"Bar Calders vermouth terrace",id:"b1c"},{t:"22:00",what:"Bar Marsella absinthe",id:"b1d"},{t:"00:00",what:"Sala Apolo - Nitsa if Friday",id:"b1e"}]},
+      {day:"Day 2 - Beach & Gracia",items:[{t:"12:00",what:"Barceloneta beach walk",id:"b2a"},{t:"19:00",what:"Sant Antoni bar crawl",id:"b2c"}]},
+      {day:"Day 3 - Departure",items:[{t:"10:00",what:"Sagrada Familia before crowds",id:"b3a"},{t:"16:00",what:"Bunkers del Carmel - 360 view",id:"b3c"}]},
+    ],
+  },
+  cdmx:{
+    spots:[
+      {id:1,name:"Limantour",type:"Bar",area:"Roma Norte",lat:19.4195,lng:-99.1607,vibe:"One of the world's top 10 bars. Mezcal Negroni. Arrive before 21:00.",rating:4.9,heat:[18,58,88,80,50,18],open:"18:00-02:00",price:"$$$"},
+      {id:2,name:"Contramar",type:"Food",area:"Roma Norte",lat:19.4187,lng:-99.1598,vibe:"The Sunday lunch institution. Tuna tostadas and snapper, 14:00, stay three hours.",rating:4.8,heat:[82,92,68,20,5,0],open:"13:00-18:00",price:"$$$"},
+      {id:3,name:"El Tizoncito",type:"Tacos",area:"Condesa",lat:19.4112,lng:-99.1722,vibe:"Inventors of tacos al pastor in 1966. The pastor off the trompo at midnight.",rating:4.7,heat:[58,72,82,75,60,35],open:"11:00-04:00",price:"$"},
+      {id:4,name:"Hanky Panky",type:"Bar",area:"Juarez",lat:19.4275,lng:-99.1655,vibe:"Speakeasy through a hot dog stand. 8-seat bar, world-class cocktails.",rating:4.9,heat:[5,18,55,88,92,62],open:"20:00-02:00",price:"$$$"},
+      {id:5,name:"Expendio de Maiz",type:"Mezcal",area:"Roma Norte",lat:19.4201,lng:-99.1612,vibe:"Serious corn-to-cup mezcal flights, small plates. No tourist theatre.",rating:4.7,heat:[38,78,88,68,30,8],open:"18:00-02:00",price:"$$"},
+      {id:6,name:"Lucha Libre",type:"Experience",area:"Centro",lat:19.4368,lng:-99.1508,vibe:"Tuesday and Friday nights - front row, referee ignores half the rules.",rating:4.6,heat:[10,55,90,72,20,5],open:"Tue & Fri 19:30",price:"$"},
+    ],
+    plan:[
+      {day:"Day 1 - Roma & The Long Lunch",items:[{t:"14:00",what:"Contramar - tuna tostadas ritual",id:"c1b"},{t:"20:00",what:"Expendio de Maiz mezcal",id:"c1d"},{t:"23:00",what:"Limantour then Roma bar crawl",id:"c1e"}]},
+      {day:"Day 2 - Culture & Speakeasy",items:[{t:"10:00",what:"Frida Kahlo Museum - book ahead",id:"c2a"},{t:"13:30",what:"El Tizoncito al pastor lunch",id:"c2b"},{t:"23:00",what:"Find Hanky Panky - through the hot dog stand",id:"c2d"}]},
+      {day:"Day 3 - Lucha Libre",items:[{t:"14:00",what:"Centro Historico",id:"c3b"},{t:"19:30",what:"Lucha Libre at Arena Mexico",id:"c3c"},{t:"23:00",what:"El Tizoncito at midnight",id:"c3d"}]},
+    ],
+  },
+};
+
+async function switchCity(key){
+  S.showPicker = false;
+  if(S.cityCache[key]){ applyCity(key); r(); return; }
+  if(PRE[key]){ S.cityCache[key]={...(CITY_META[key]||{}),...PRE[key]}; applyCity(key); r(); return; }
+  // Start AI loading
+  S.cityLoading = key;
+  S.cityLoadError = false;
+  r();
+  try{
+    const m = CITY_META[key];
+    const raw = await callClaude(
+      `Generate curated travel data for ${m.name}, ${m.country} for "Buddy" travel app.
+Target: 25-35 year old travellers who love authentic nightlife, food, culture.
+Return ONLY valid JSON with no markdown fences.
+
+{
+  "spots": [
+    {"id":1,"name":"Real venue name","type":"Bar|Club|Food|Wine|Hang|View","area":"Neighbourhood","lat":0.0,"lng":0.0,"vibe":"2-3 sentence atmospheric insider description","rating":4.7,"heat":[45,65,80,75,50,20],"open":"19:00–02:00","price":"$$"}
+  ],
+  "plan": [
+    {"day":"Day 1 — Title","items":[{"t":"10:00","what":"Specific activity","id":"x1a"}]}
+  ]
+}
+
+Rules:
+- 8-10 spots total, mix of types
+- Real accurate lat/lng coordinates for ${m.name}
+- heat array: 6 values [18:00,20:00,22:00,00:00,02:00,04:00] each 0-100
+- Exactly 3 days in plan, 4-5 items each
+- Unique item ids: x1a,x1b... x2a,x2b... x3a,x3b...`, 4000);
+    const data = JSON.parse(raw);
+    S.cityCache[key] = {...(CITY_META[key]||{}), ...data};
+    applyCity(key);
+    S.cityLoading = null;
+    r();
+  } catch(e){
+    S.cityLoadError = true;
+    r();
+  }
+}
+
+function applyCity(key){
+  S.cityKey = key;
+  S.filter = "All";
+  S.mapFilter = "All";
+  S.saved = [];
+  S.done = [];
+  S.vibeResult = null;
+  S.vibeInput = "";
+  S.itiResult = null;
+  S.openSpot = null;
+  S.mapInited = false;
+  if(S.mapInstance){ S.mapInstance.remove(); S.mapInstance = null; }
+  S.mapMarkers = [];
+  S.customPlanItems = {};
+  S.addingPlan = {};
+}
+
+// ── TRANSLATOR ────────────────────────────────────────────────────────────────
+function renderTranslator(){
+  const lang = cityLang();
+  const m = meta();
+  return `<div class="fadeIn" style="height:100vh;height:100dvh;display:flex;flex-direction:column;background:var(--night);">
+    <div style="padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:var(--panel);">
+      <div>
+        <div style="font-family:Syne,sans-serif;font-weight:800;font-size:18px;color:var(--cream);">🌐 Translator</div>
+        <div style="font-size:11px;color:var(--muted);">English ↔ ${lang}${m.name?" · "+m.name:""} · auto-detect</div>
+      </div>
+      <button onclick="S.transOpen=false;stopListening();r()" style="background:none;border:none;color:var(--muted);font-size:28px;line-height:1;padding:0 4px;">×</button>
+    </div>
+    <div id="transHistory" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:10px;">
+      ${(function(){ return S.transHistory.map(function(entry){
+        var isOut=entry.dir==="out";
+        return '<div style="display:flex;justify-content:'+(isOut?"flex-end":"flex-start")+';">'
+          +'<div style="max-width:82%;padding:10px 14px;border-radius:14px;'
+          +(isOut?"border-bottom-right-radius:4px;background:var(--sap);border:1px solid var(--garnet)":"border-bottom-left-radius:4px;background:var(--panel2);border:1px solid var(--line)")
+          +'">'
+          +'<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">'+(isOut?"You to "+lang:"Detected: "+entry.detectedLang+" to English")+'</div>'
+          +'<div style="font-size:13.5px;color:var(--cream);line-height:1.5;">'+entry.original+'</div>'
+          +'<div style="font-size:13.5px;color:var(--amber);line-height:1.5;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.1);">'+entry.translated+'</div>'
+          +'</div></div>';
+      }).join(""); })()}
+      ${S.transListening ? `
+        <div style="display:flex;justify-content:flex-end;">
+          <div style="padding:10px 14px;border-radius:14px;border-bottom-right-radius:4px;background:var(--sap);border:1px solid var(--garnet);max-width:82%;">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">Listening…</div>
+            <div style="font-size:13px;color:var(--cdim);font-style:italic;">${S.transInterim||"speak now…"}</div>
+            <div style="display:flex;gap:3px;align-items:flex-end;height:28px;margin-top:6px;">
+              ${[6,14,20,14,6,20,14,6,14,20].map((ht,i)=>`<div style="width:3px;height:${ht}px;border-radius:2px;background:var(--garnet);animation:wave 1s ease-in-out ${i*.1}s infinite;"></div>`).join("")}
+            </div>
+          </div>
+        </div>` :
+        S.transHistory.length===0 ? `<div style="text-align:center;padding:48px 20px;color:var(--muted);font-size:13px;line-height:1.8;">Tap the mic and speak.<br/>Buddy translates to <strong style="color:var(--amber);">${lang}</strong>.<br/>Let a local speak — Buddy auto-detects & translates back.</div>` : ""}
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid var(--line);background:var(--panel);display:flex;gap:10px;align-items:center;flex-shrink:0;">
+      <button onclick="${S.transListening?"stopListening()":"startListening()"}" style="width:64px;height:64px;border-radius:50%;border:none;background:${S.transListening?"var(--garnet)":"linear-gradient(135deg,var(--sap),var(--garnet))"};color:var(--cream);font-size:26px;flex-shrink:0;${S.transListening?"box-shadow:0 0 0 6px rgba(192,53,70,.3);":""}">${S.transListening?"⏹":"🎙"}</button>
+      <div style="flex:1;">
+        <div style="font-size:12px;color:var(--muted);">${S.transListening?"Recording… tap to stop":"Tap mic to speak"}</div>
+        <div style="font-size:11px;color:var(--mdim);margin-top:2px;">→ ${lang}${m.name?" · "+m.name:""}</div>
+      </div>
+      <button onclick="S.transHistory=[];r()" style="background:none;border:1px solid var(--line);border-radius:999px;padding:6px 12px;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;">Clear</button>
+    </div>
+  </div>`;
+}
+
+function startListening(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    S.transHistory.push({dir:"in",original:"Speech recognition not available in this browser. Try Chrome on Android.",translated:"",detectedLang:"system"});
+    r(); return;
+  }
+  const rec = new SR();
+  rec.continuous = false; rec.interimResults = true; rec.lang = "en-US";
+  S.recognition = rec; S.transListening = true; S.transInterim = "";
+  rec.onresult = e => {
+    let interim="", final="";
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    S.transInterim = interim;
+    if(final) processTranslation(final);
+    r();
+  };
+  rec.onend = () => { S.transListening=false; S.transInterim=""; r(); };
+  rec.onerror = () => { S.transListening=false; r(); };
+  rec.start();
+}
+function stopListening(){ if(S.recognition) S.recognition.stop(); S.transListening=false; r(); }
+async function processTranslation(text){
+  S.transListening=false; S.transInterim=""; r();
+  const lang = cityLang();
+  try{
+    const raw = await callClaude(`Translate this text. Detect language, translate appropriately.\nText: "${text}"\nIf English → translate to ${lang}. If not English → translate to English.\nReturn ONLY JSON: {"detectedLang":"English","direction":"out","translated":"translation here"}\ndirection: "out"=input was English, "in"=input was local language.`, 300);
+    const d = JSON.parse(raw);
+    S.transHistory.push({dir:d.direction||"out",original:text,translated:d.translated||"",detectedLang:d.detectedLang||"?"});
+  } catch {
+    S.transHistory.push({dir:"out",original:text,translated:"(translation failed)",detectedLang:"?"});
+  }
+  r();
+  setTimeout(()=>{ const h=document.getElementById("transHistory"); if(h) h.scrollTop=h.scrollHeight; },60);
+}
+
+// ── MAIN SHELL ────────────────────────────────────────────────────────────────
+function renderMain(){
+  const m = meta();
+  const hasCity = !!S.cityKey;
+  const stepsKm = (S.steps * 0.762 / 1000).toFixed(2);
+
+  return `<div style="height:100%;display:flex;flex-direction:column;background:var(--night);">
+
+    <!-- STEP COUNTER + TRANSLATE BAR -->
+    <div style="display:flex;align-items:center;background:var(--panel);border-bottom:1px solid var(--line);padding:0 12px;height:32px;flex-shrink:0;gap:8px;">
+      <div onclick="toggleSteps()" style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;min-width:0;">
+        <span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:${S.stepsActive?"var(--live)":"var(--mdim)"};${S.stepsActive?"animation:pulse 2s ease-in-out infinite":""}"></span>
+        <span style="font-size:11.5px;color:var(--cream);font-weight:600;white-space:nowrap;">👟 ${S.steps.toLocaleString()}</span>
+        <span style="font-size:10px;color:var(--muted);white-space:nowrap;">${stepsKm} km</span>
+        <span style="font-size:9px;color:var(--mdim);white-space:nowrap;">${S.stepsActive?"· tracking":"· tap"}</span>
+      </div>
+      <button onclick="S.transOpen=true;r()" style="background:linear-gradient(90deg,var(--sap),var(--garnet));border:none;border-radius:999px;padding:4px 11px;color:var(--cream);font-family:Syne,sans-serif;font-weight:700;font-size:11px;white-space:nowrap;cursor:pointer;flex-shrink:0;">🌐 Translate</button>
+    </div>
+
+    <!-- HEADER -->
+    <div style="padding:11px 16px 9px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--panel) 0%,var(--night) 100%);flex-shrink:0;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:Syne,sans-serif;font-weight:800;font-size:20px;color:var(--cream);">Buddy <span style="color:var(--garnet);">✦</span></div>
+        <button onclick="S.showPicker=true;r()" style="display:flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid ${hasCity?"var(--garnet)":"var(--line)"};border-radius:999px;padding:6px 13px;cursor:pointer;font-family:inherit;">
+          <span style="font-size:14px;">${hasCity?(m.flag||"🌍"):"＋"}</span>
+          <span style="font-size:12px;color:var(--cream);font-weight:600;">${hasCity?(m.name||"..."):"New trip"}</span>
+          <span style="font-size:9px;color:var(--muted);">▾</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div id="mainBody" style="flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;min-height:0;padding:${S.tab==="map"?"0":"14px"};">
+      ${S.tab==="explore" ? renderExplore() : ""}
+      ${S.tab==="map"     ? renderMap()     : ""}
+      ${S.tab==="saved"   ? renderSaved()   : ""}
+      ${S.tab==="plan"    ? renderPlan()    : ""}
+      ${S.tab==="chat"    ? renderChat()    : ""}
+      ${S.tab==="you"     ? renderYou()     : ""}
+    </div>
+
+    ${S.tab==="chat" && S.groups.length>0 ? renderChatComposer() : ""}
+
+    <!-- NAV -->
+    <nav style="display:flex;border-top:1px solid var(--line);background:var(--panel);flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,0px);">
+      ${[["explore","✦","Explore"],["map","◉","Map"],["saved","♥","Saved"],["plan","☰","Plan"],["chat","✉","Chat"],["you","◍","You"]].map(([k,ic,lab])=>`
+        <button onclick="switchTab('${k}')" style="flex:1;padding:9px 0 10px;background:none;border:none;cursor:pointer;color:${S.tab===k?"var(--amber)":"var(--muted)"};font-family:inherit;">
+          <div style="font-size:15px;line-height:1;">${ic}</div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.06em;margin-top:3px;text-transform:uppercase;">${lab}</div>
+        </button>`).join("")}
+    </nav>
+  </div>`;
+}
+
+function switchTab(t){
+  S.tab=t;
+  S.mapInited=false;
+  if(S.mapInstance){ S.mapInstance.remove(); S.mapInstance=null; }
+  S.mapMarkers=[];
+  r();
+}
+
+// ── EXPLORE ───────────────────────────────────────────────────────────────────
+function renderExplore(){
+  if(!S.cityKey){
+    return `<div class="rise" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:20px;">
+      <div style="font-size:48px;margin-bottom:16px;">🗺</div>
+      <div style="font-family:Syne,sans-serif;font-weight:800;font-size:22px;color:var(--cream);margin-bottom:8px;">No trip selected</div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.6;">Pick a city to start exploring<br/>venues, vibes & hidden gems.</div>
+      <button onclick="S.showPicker=true;r()" style="padding:13px 28px;border-radius:14px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-family:Syne,sans-serif;font-weight:700;font-size:15px;cursor:pointer;">+ New trip</button>
+    </div>`;
+  }
+  const shown = shownSpots();
+  const tr = spotTypes();
+  return `<div class="rise">
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;gap:8px;">
+        <input id="vibeInput" value="${escH(S.vibeInput)}" placeholder="Describe your vibe tonight…" onkeydown="if(event.key==='Enter')matchVibe()" oninput="S.vibeInput=this.value" style="flex:1;background:var(--panel2);border:1px solid ${S.vibeResult?"var(--garnet)":"var(--line)"};border-radius:999px;padding:9px 14px;color:var(--cream);font-size:13px;"/>
+        <button onclick="matchVibe()" ${S.vibeLoading?"disabled":""} style="flex-shrink:0;background:${S.vibeResult?"var(--sap)":"var(--panel2)"};border:1px solid var(--garnet);border-radius:999px;padding:0 15px;color:${S.vibeLoading?"var(--muted)":"var(--garnet)"};font-weight:800;font-size:14px;min-width:46px;cursor:pointer;">${S.vibeLoading?"…":"✦"}</button>
+      </div>
+      ${S.vibeResult?`<div class="rise" style="margin-top:10px;">
+        <div style="font-size:12.5px;color:var(--amber);margin-bottom:10px;font-style:italic;line-height:1.5;">"${escH(S.vibeResult.summary)}"</div>
+        ${(S.vibeResult.matches||[]).map(match=>{const sp=spots().find(s=>s.id===match.id);if(!sp)return"";return`<div style="background:var(--panel2);border:1px solid var(--garnet);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;"><div style="flex:1;"><div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;color:var(--cream);">${escH(sp.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4;">${escH(match.reason)}</div></div><span style="flex-shrink:0;font-size:9px;background:var(--sap);color:var(--cream);border-radius:999px;padding:3px 8px;font-weight:800;">AI</span></div>`;}).join("")}
+        <button onclick="S.vibeResult=null;S.vibeInput='';r()" style="background:none;border:none;color:var(--muted);font-size:11.5px;cursor:pointer;font-family:inherit;padding:2px 0;">clear ×</button>
+      </div>`:""}
+    </div>
+    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;">
+     ${tr.map(function(t){return "<button data-f='"+t+"' onclick='setFilter(this,false)' style='flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;border:1px solid "+(S.filter===t?"var(--garnet)":"var(--line)")+";background:"+(S.filter===t?"var(--sap)":"transparent")+";color:"+(S.filter===t?"var(--cream)":"var(--muted)")+";'>"+t+"</button>";}).join("")}
+    </div>
+    ${shown.map(s=>{
+      const h=s.heat[S.timeIdx];
+      const isOpen=S.openSpot===s.id;
+      const ai=S.vibeResult?.matches?.some(m=>m.id===s.id);
+      const isSaved=S.saved.includes(s.id);
+      return `<div onclick="S.openSpot=${isOpen?"null":s.id};r()" style="background:var(--panel);border:1px solid ${ai?"var(--garnet)":"var(--line)"};border-radius:16px;padding:14px;margin-bottom:10px;cursor:pointer;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+          <div style="flex:1;min-width:0;"><div style="font-family:Syne,sans-serif;font-weight:700;font-size:16px;color:var(--cream);">${escH(s.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${escH(s.type)} · ${escH(s.area)} · ★ ${s.rating}</div></div>
+          <div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">
+            <button onclick="event.stopPropagation();shareSpot(${s.id})" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);padding:2px;">⬆</button>
+            <button onclick="event.stopPropagation();toggleSave(${s.id})" style="background:none;border:none;cursor:pointer;font-size:18px;color:${isSaved?"var(--amber)":"var(--muted)"};padding:2px;">${isSaved?"♥":"♡"}</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+          <div style="flex:1;height:4px;border-radius:2px;background:var(--line);overflow:hidden;"><div style="width:${h}%;height:100%;border-radius:2px;background:${h>75?"var(--live)":h>40?"var(--amber)":"var(--garnet)"};"></div></div>
+          <span style="font-size:11px;color:${h>75?"var(--live)":"var(--muted)"};font-weight:700;white-space:nowrap;">${h>75?"BUZZING":h>40?"warming":"quiet"} · ${TIMES[S.timeIdx]}</span>
+        </div>
+        ${isOpen?`<div class="rise" style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:13.5px;line-height:1.55;color:var(--cream);">${escH(s.vibe)}<div style="margin-top:8px;font-size:12px;color:var(--muted);">Open ${escH(s.open)} · ${escH(s.price)}</div></div>`:""}
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
+// ── MAP ───────────────────────────────────────────────────────────────────────
+function renderMap(){
+  if(!S.cityKey){
+    return `<div class="rise" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:20px;">
+      <div style="font-size:48px;margin-bottom:16px;">🗺</div>
+      <div style="font-family:Syne,sans-serif;font-weight:800;font-size:20px;color:var(--cream);margin-bottom:8px;">No city loaded</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Select a city to view its interactive map.</div>
+      <button onclick="S.showPicker=true;r()" style="padding:12px 24px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-family:Syne,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">+ New trip</button>
+    </div>`;
+  }
+  const tr = spotTypes();
+  return `<div style="display:flex;flex-direction:column;flex:1;min-height:0;">
+    <!-- Type filter strip -->
+    <div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 14px 8px;flex-shrink:0;background:var(--panel);border-bottom:1px solid var(--line);">
+     ${tr.map(function(t){return "<button data-f='"+t+"' onclick='setFilter(this,true)' style='flex-shrink:0;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;border:1px solid "+(S.filter===t?"var(--garnet)":"var(--line)")+";background:"+(S.filter===t?"var(--sap)":"transparent")+";color:"+(S.filter===t?"var(--cream)":"var(--muted)") +";'>"+t+"</button>";}).join("")}
+    </div>
+    <!-- Map container: takes all remaining space -->
+    <div id="leafletMap" style="flex:1;width:100%;min-height:200px;"></div>
+    <!-- Time scrubber -->
+    <div style="padding:10px 14px 12px;flex-shrink:0;background:var(--panel);border-top:1px solid var(--line);">
+      <input type="range" min="0" max="5" value="${S.timeIdx}" oninput="S.timeIdx=+this.value;updateMapPins()" style="width:100%;"/>
+      <div style="display:flex;justify-content:space-between;font-size:10.5px;margin-top:4px;">
+        ${TIMES.map((t,i)=>`<span style="color:${i===S.timeIdx?"var(--amber)":"var(--muted)"};font-weight:${i===S.timeIdx?700:400};">${t}</span>`).join("")}
+      </div>
+    </div>
+  </div>`;
+}
+
+function initMap(){
+  if(S.mapInited) return;
+  const el = document.getElementById("leafletMap");
+  if(!el || !window.L) return;
+  if(el.offsetHeight < 10){
+    const ro = new ResizeObserver((entries,obs)=>{ if(el.offsetHeight>=10){obs.disconnect();initMap();} });
+    ro.observe(el);
+    setTimeout(()=>{ if(!S.mapInited) initMap(); }, 400);
+    return;
+  }
+  const m = meta();
+  const center = (m.center && m.center[0]!==0) ? m.center : [41.6938,44.8015];
+  try{
+    const map = L.map("leafletMap",{zoomControl:true,attributionControl:true,tap:false}).setView(center,14);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{
+      attribution:'&copy; <a href="https://openstreetmap.org">OSM</a> &copy; <a href="https://carto.com">CARTO</a>',
+      subdomains:"abcd",maxZoom:20,detectRetina:true
+    }).addTo(map);
+    S.mapInstance=map; S.mapInited=true;
+    placeMapPins(map);
+    setTimeout(()=>{ if(S.mapInstance) S.mapInstance.invalidateSize(); },150);
+    setTimeout(()=>{ if(S.mapInstance) S.mapInstance.invalidateSize(); },600);
+  } catch(e){ console.error("Map init failed:",e); }
+}
+
+
+function placeMapPins(map){
+  if(!map || !window.L) return;
+  S.mapMarkers.forEach(m=>{ try{ map.removeLayer(m); } catch(e){} });
+  S.mapMarkers = [];
+  const shown = shownSpots();
+  shown.forEach(s=>{
+    if(!s.lat || !s.lng) return;
+    const h = s.heat[S.timeIdx];
+    const col = h>75 ? "#3FD8C2" : h>40 ? "#E8A14C" : "#C03546";
+    const isSaved = S.saved.includes(s.id);
+    const sz = isSaved ? 18 : 13;
+    const icon = L.divIcon({
+      className:"",
+      html:`<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${col};border:2px solid ${isSaved?"#E8A14C":"rgba(255,255,255,.25)"};box-shadow:0 0 ${h>75?10:5}px ${col}80;"></div>`,
+      iconSize:[sz+4,sz+4], iconAnchor:[(sz+4)/2,(sz+4)/2]
+    });
+    const marker = L.marker([s.lat,s.lng],{icon}).addTo(map);
+    marker.bindPopup(`<div style="min-width:150px;">
+      <div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;margin-bottom:3px;">${escH(s.name)}</div>
+      <div style="font-size:11px;color:#9A8495;margin-bottom:6px;">${escH(s.type)} · ${escH(s.area)}</div>
+      <div style="font-size:12px;line-height:1.45;margin-bottom:8px;">${escH(s.vibe.slice(0,90))}…</div>
+      <div style="font-size:11px;color:#9A8495;margin-bottom:8px;">Open ${escH(s.open)} · ${escH(s.price)}</div>
+      <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank"
+         style="display:inline-block;background:linear-gradient(90deg,#8E1F36,#C03546);color:#F4E9E3;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;text-decoration:none;font-family:Syne,sans-serif;">Directions ↗</a>
+    </div>`);
+    S.mapMarkers.push(marker);
+  });
+}
+
+function updateMapPins(){
+  if(S.mapInstance) placeMapPins(S.mapInstance);
+  // Re-render time scrubber labels without destroying map
+  const labels = document.querySelectorAll("[data-timelabel]");
+  labels.forEach((el,i)=>{
+    el.style.color = i===S.timeIdx ? "var(--amber)" : "var(--muted)";
+    el.style.fontWeight = i===S.timeIdx ? "700" : "400";
+  });
+}
+
+// ── SAVED ─────────────────────────────────────────────────────────────────────
+function renderSaved(){
+  if(!S.cityKey) return renderNoCity("Your saved spots will appear here once you select a city.");
+  const savedSpots = spots().filter(s=>S.saved.includes(s.id));
+  return `<div class="rise">
+    <div style="font-family:Syne,sans-serif;font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Saved spots</div>
+    ${S.itiResult?`<div class="rise" style="background:var(--panel2);border:1px solid var(--garnet);border-radius:16px;padding:16px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+        <div style="font-family:Syne,sans-serif;font-weight:800;font-size:15px;color:var(--amber);">✦ ${escH(S.itiResult.title)}</div>
+        <span style="font-size:9px;background:var(--sap);color:var(--cream);border-radius:999px;padding:3px 8px;font-weight:800;">AI PLAN</span>
+      </div>
+      <div style="font-size:12.5px;color:var(--muted);font-style:italic;margin-bottom:14px;line-height:1.5;">${escH(S.itiResult.intro)}</div>
+      ${(S.itiResult.stops||[]).map((stop,i)=>{
+        const sp=spots().find(s=>s.id===stop.id);if(!sp)return"";
+        return`<div style="display:flex;gap:12px;margin-bottom:${i===S.itiResult.stops.length-1?0:12}px;align-items:flex-start;">
+          <div style="flex-shrink:0;width:42px;"><div style="font-size:10.5px;color:var(--garnet);font-weight:700;text-align:right;">${stop.time}</div></div>
+          <div style="flex:1;padding-left:12px;border-left:2px solid var(--line);"><div style="font-size:13.5px;color:var(--cream);font-weight:600;">${escH(sp.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4;">${escH(stop.tip)}</div></div>
+        </div>`;
+      }).join("")}
+      <button onclick="S.itiResult=null;r()" style="margin-top:12px;background:none;border:none;color:var(--muted);font-size:11.5px;cursor:pointer;font-family:inherit;">clear ×</button>
+    </div>`:""}
+    ${savedSpots.length===0?`<div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;font-size:12.5px;color:var(--muted);line-height:1.6;">Nothing saved yet.<br/>Tap ♡ on any spot in Explore.</div>`:""}
+${savedSpots.map(function(s){
+      return '<div style="background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:14px;padding:14px;margin-bottom:10px;">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+        +'<div><div style="font-family:Syne,sans-serif;font-weight:700;font-size:15px;color:var(--cream);">'+escH(s.name)+'</div>'
+        +'<div style="font-size:12px;color:var(--muted);margin-top:2px;">'+escH(s.type)+' &middot; '+escH(s.area)+' &middot; '+escH(s.open)+'</div>'
+        +'</div>'
+        +'<button onclick="toggleSave('+s.id+')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;font-family:inherit;margin-left:8px;">remove</button>'
+        +'</div></div>';
+    }).join("")}
+    ${savedSpots.length>0?`<button onclick="genIti()" ${S.itiLoading?"disabled":""} style="margin-top:6px;width:100%;padding:13px 0;border-radius:12px;border:${S.itiLoading?"1px solid var(--line)":"none"};background:${S.itiLoading?"var(--panel2)":"linear-gradient(90deg,var(--sap),var(--garnet))"};color:${S.itiLoading?"var(--muted)":"var(--cream)"};font-family:Syne,sans-serif;font-weight:700;font-size:14px;cursor:${S.itiLoading?"default":"pointer"};">${S.itiLoading?"Building your night…":"✦ Build tonight's plan from these spots"}</button>`:""}
+  </div>`;
+}
+
+// ── PLAN ──────────────────────────────────────────────────────────────────────
+function renderPlan(){
+  if(!S.cityKey) return renderNoCity("Your 3-day plan will appear here once you select a city.");
+  const c = cityData();
+  const plan = (c&&c.plan) ? c.plan : [];
+  return `<div class="rise">
+    <div style="font-family:Syne,sans-serif;font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">3-day plan · ${meta().name||"..."}</div>
+    ${plan.map(d=>{
+      const customItems = S.customPlanItems[d.day]||[];
+      const allItems = [...d.items, ...customItems];
+      const adding = S.addingPlan[d.day];
+      return `<div style="margin-bottom:20px;">
+        <div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;color:var(--amber);margin-bottom:8px;">${escH(d.day)}</div>
+        ${allItems.map(it=>{
+          const isDone = S.done.includes(it.id);
+          const isCustom = customItems.some(ci=>ci.id===it.id);
+          return`<div style="display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:6px;opacity:${isDone?.5:1};">
+            <button onclick="toggleDone('${it.id}')" style="width:18px;height:18px;border-radius:6px;flex-shrink:0;margin-top:2px;border:1.5px solid ${isDone?"var(--live)":"var(--muted)"};background:${isDone?"var(--live)":"transparent"};color:var(--night);font-size:10px;font-weight:800;cursor:pointer;display:grid;place-items:center;">${isDone?"✓":""}</button>
+            <div style="flex:1;min-width:0;"><span style="font-size:11.5px;color:var(--garnet);font-weight:700;margin-right:6px;">${it.t}</span><span style="font-size:13px;color:var(--cream);text-decoration:${isDone?"line-through":"none"};">${escH(it.what)}</span></div>
+            <button onclick="removePlanItem(${JSON.stringify(d.day)},${JSON.stringify(it.id)},${isCustom})" style="background:none;border:none;color:var(--mdim);font-size:14px;cursor:pointer;flex-shrink:0;padding:0 2px;line-height:1;">×</button>
+          </div>`;
+        }).join("")}
+        ${adding?`
+          <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center;">
+            <input placeholder="09:00" id="pt_${d.day.replace(/\W/g,'')}" style="width:64px;flex-shrink:0;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 8px;color:var(--cream);font-size:12px;"/>
+            <input placeholder="Activity…" id="pw_${d.day.replace(/\W/g,'')}" onkeydown="if(event.key==='Enter')addPlanItem(${JSON.stringify(d.day)})" style="flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--cream);font-size:12px;"/>
+            <button onclick="addPlanItem(${JSON.stringify(d.day)})" style="background:var(--amber);border:none;border-radius:999px;padding:0 12px;height:34px;color:var(--night);font-weight:800;font-size:13px;flex-shrink:0;">+</button>
+            <button onclick="S.addingPlan[${JSON.stringify(d.day)}]=false;r()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;flex-shrink:0;">×</button>
+          </div>` :
+          `<button onclick="S.addingPlan[${JSON.stringify(d.day)}]=true;r()" style="width:100%;padding:8px;border-radius:10px;border:1px dashed var(--line);background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;font-family:inherit;">+ Add activity</button>`}
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
+function removePlanItem(day, id, isCustom){
+  if(isCustom){
+    if(S.customPlanItems[day]) S.customPlanItems[day]=S.customPlanItems[day].filter(i=>i.id!==id);
+  } else {
+    const c=cityData();
+    if(c&&c.plan) c.plan.forEach(d=>{ if(d.day===day) d.items=d.items.filter(i=>i.id!==id); });
+  }
+  r();
+}
+
+function addPlanItem(day){
+  const key = day.replace(/\W/g,'');
+  const tEl = document.getElementById("pt_"+key);
+  const wEl = document.getElementById("pw_"+key);
+  const t = tEl ? tEl.value.trim() : "";
+  const w = wEl ? wEl.value.trim() : "";
+  if(!w) return;
+  if(!S.customPlanItems[day]) S.customPlanItems[day]=[];
+  S.customPlanItems[day].push({t:t||"?:00", what:w, id:"c_"+Date.now()});
+  S.addingPlan[day]=false;
+  r();
+}
+
+// ── CHAT ──────────────────────────────────────────────────────────────────────
+function renderChat(){
+  if(!S.groups.length){
+    return `<div class="rise" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:20px;">
+      <div style="font-size:44px;margin-bottom:14px;">✉</div>
+      <div style="font-family:Syne,sans-serif;font-weight:800;font-size:20px;color:var(--cream);margin-bottom:8px;">No groups yet</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Create a group in the You tab<br/>to chat with your travel crew.</div>
+      <button onclick="S.tab='you';r()" style="padding:11px 24px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-family:Syne,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Go to You →</button>
+    </div>`;
+  }
+  const g = activeG();
+  return `<div class="rise" style="padding:0;margin:-14px;display:flex;flex-direction:column;height:100%;">
+    <div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 14px 8px;border-bottom:1px solid var(--line);flex-shrink:0;background:var(--panel);">
+      ${S.groups.map(function(grp){return '<button onclick="S.activeGroup='+grp.id+';r()" style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;border:1px solid '+(S.activeGroup===grp.id?"var(--garnet)":"var(--line)")+';background:'+(S.activeGroup===grp.id?"var(--sap)":"transparent")+';color:'+(S.activeGroup===grp.id?"var(--cream)":"var(--muted)")+';">'+escH(grp.name)+'</button>';}).join("")}
+    </div>
+    ${g?`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px dashed var(--line);flex-shrink:0;">
+      ${g.members.map(function(mem){return '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--cream);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 9px;"><span style="width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,var(--garnet),var(--amber));display:grid;place-items:center;font-size:8px;font-weight:800;color:var(--night);">'+mem[0].toUpperCase()+'</span>'+escH(mem)+'</span>';}).join("")}
+    </div>`:""}
+    <div id="msgList" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:8px;min-height:0;">
+      ${msgs().length===0?`<div style="text-align:center;padding:32px 20px;color:var(--muted);font-size:13px;">No messages yet. Say something 👋</div>`:""}
+      ${msgs().map(function(m){return '<div style="display:flex;justify-content:'+(m.me?"flex-end":"flex-start")+';"><div style="max-width:78%;padding:8px 12px;border-radius:14px;'+(m.me?"border-bottom-right-radius:4px;background:var(--sap);border:1px solid var(--garnet)":"border-bottom-left-radius:4px;background:var(--panel2);border:1px solid var(--line)")+'">'+(!m.me?'<div style="font-size:10.5px;font-weight:700;color:var(--amber);margin-bottom:2px;">'+escH(m.who)+'</div>':'')+ '<div style="font-size:13.5px;color:var(--cream);line-height:1.45;">'+escH(m.text)+'</div><div style="font-size:9.5px;color:var(--muted);margin-top:3px;text-align:right;">'+m.time+'</div></div></div>';}).join("")}
+    </div>
+  </div>`;
+}
+
+function renderChatComposer(){
+  return `<div style="display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line);background:var(--panel);flex-shrink:0;">
+    <input id="chatDraft" value="${escH(S.draft)}" onkeydown="if(event.key==='Enter')sendMsg()" oninput="S.draft=this.value" placeholder="Message the crew…" style="flex:1;background:var(--night);border:1px solid var(--line);border-radius:999px;padding:9px 14px;color:var(--cream);font-size:13.5px;"/>
+    <button onclick="sendMsg()" style="background:var(--garnet);border:none;border-radius:999px;padding:0 18px;color:var(--cream);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">Send</button>
+  </div>`;
+}
+
+function sendMsg(){
+  const t=S.draft.trim(); if(!t||!activeG()) return;
+  const now=new Date();
+  const stamp=`${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+  if(!S.msgs[S.activeGroup]) S.msgs[S.activeGroup]=[];
+  S.msgs[S.activeGroup].push({who:S.username,me:true,text:t,time:stamp});
+  S.draft=""; r();
+  setTimeout(()=>{ const ml=document.getElementById("msgList"); if(ml) ml.scrollTop=ml.scrollHeight; },60);
+}
+
+// ── YOU ───────────────────────────────────────────────────────────────────────
+function renderYou(){
+  const m = meta();
+  const hasCity = !!S.cityKey;
+  const stepsKm = (S.steps*0.762/1000).toFixed(2);
+  const doneCount = S.done.filter(d=>!d.endsWith("_removed")).length;
+  return `<div class="rise">
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:18px;">
+      <div style="width:56px;height:56px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--garnet),var(--amber));display:grid;place-items:center;font-family:Syne,sans-serif;font-weight:800;font-size:21px;color:var(--night);">${S.username[0]||"B"}</div>
+      <div><div style="font-family:Syne,sans-serif;font-weight:700;font-size:18px;color:var(--cream);">${escH(S.username)}</div><div style="font-size:12px;color:var(--muted);">Night owl · Wine first, techno later</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;">
+      ${[[S.saved.length,"saved"],[doneCount,"plan done"],[S.groups.length,"groups"]].map(([n,l])=>`
+        <div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center;">
+          <div style="font-family:Syne,sans-serif;font-weight:800;font-size:22px;color:var(--amber);">${n}</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:2px;">${l}</div>
+        </div>`).join("")}
+    </div>
+
+    <div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:18px;">
+      <div style="font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Current trip</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:24px;">${hasCity?(m.flag||"🌍"):"🗺"}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:Syne,sans-serif;font-weight:700;font-size:16px;color:var(--cream);">${hasCity?(m.name||"..."):"No trip selected"}</div>
+          ${hasCity?`<div style="font-size:12px;color:var(--muted);">${m.country||""} · ${m.currency||""} · ${m.timezone||""}</div>`:`<div style="font-size:12px;color:var(--muted);">Tap to pick a city</div>`}
+        </div>
+        <button onclick="S.showPicker=true;r()" style="background:transparent;border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--amber);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">${hasCity?"Switch ▾":"Pick ▾"}</button>
+      </div>
+    </div>
+
+    <div style="font-family:Syne,sans-serif;font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Your groups</div>
+    ${S.groups.length===0?`<div style="background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:14px;font-size:13px;color:var(--muted);margin-bottom:12px;">No groups yet — create one below.</div>`:""}
+    ${S.groups.map(function(g){
+      var isActive=S.activeGroup===g.id,isConfirm=S.confirmDel===g.id,isCopied=S.copiedId===g.id;
+      var mems=g.members.map(function(mem){
+        var canRm=mem!=="You"&&mem!==S.username;
+        return '<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--cream);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;"><span style="width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,var(--garnet),var(--amber));display:grid;place-items:center;font-size:8px;font-weight:800;color:var(--night);">'+mem[0].toUpperCase()+'</span>'+escH(mem)+(canRm?'<button onclick="remMember('+g.id+',''+mem+'')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0;">&#215;</button>':'')+'</span>';
+      }).join('');
+      return '<div style="background:var(--panel);border:1px solid '+(isActive?'var(--garnet)':'var(--line)')+';border-radius:16px;padding:14px;margin-bottom:12px;">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+        +'<div style="font-family:Syne,sans-serif;font-weight:700;font-size:15px;color:var(--cream);">'+escH(g.name)+' <span style="font-size:11px;color:var(--muted);font-weight:400;">'+g.members.length+' member'+(g.members.length===1?'':'s')+'</span></div>'
+        +'<button onclick="delGroup('+g.id+')" style="background:'+(isConfirm?'var(--garnet)':'none')+';border:1px solid '+(isConfirm?'var(--garnet)':'var(--line)')+';border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;color:'+(isConfirm?'var(--cream)':'var(--muted)')+';cursor:pointer;font-family:inherit;">'+(isConfirm?'Tap again':'Delete')+'</button>'
+        +'</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">'+mems+'</div>'
+        +'<div style="display:flex;gap:8px;margin-bottom:12px;"><input id="mem_'+g.id+'" placeholder="Add member..." onkeydown="if(event.key==='Enter')addMember('+g.id+')" style="flex:1;background:var(--night);border:1px solid var(--line);border-radius:999px;padding:8px 14px;color:var(--cream);font-size:12.5px;"/><button onclick="addMember('+g.id+')" style="background:transparent;border:1px solid var(--amber);border-radius:999px;padding:0 16px;color:var(--amber);font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;">Add</button></div>'
+        +'<button onclick="shareGroup('+g.id+')" style="width:100%;padding:12px 0;border-radius:12px;border:none;cursor:pointer;background:'+(isCopied?'var(--live)':'linear-gradient(90deg,var(--sap),var(--garnet))')+';color:'+(isCopied?'var(--night)':'var(--cream)')+';font-family:Syne,sans-serif;font-weight:700;font-size:14px;">'+(isCopied?'Copied!':'Share invite')+'</button>'
+        +'<div style="margin-top:7px;font-size:10.5px;color:var(--mdim);text-align:center;">buddy://join/'+g.code+'</div>'
+        +'</div>';
+    }).join("")}
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <input id="mem_${g.id}" placeholder="Add member…" onkeydown="if(event.key==='Enter')addMember(${g.id})" style="flex:1;background:var(--night);border:1px solid var(--line);border-radius:999px;padding:8px 14px;color:var(--cream);font-size:12.5px;"/>
+          <button onclick="addMember(${g.id})" style="background:transparent;border:1px solid var(--amber);border-radius:999px;padding:0 16px;color:var(--amber);font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;">Add</button>
+        </div>
+        <button onclick="shareGroup(${g.id})" style="width:100%;padding:12px 0;border-radius:12px;border:none;cursor:pointer;background:${S.copiedId===g.id?"var(--live)":"linear-gradient(90deg,var(--sap),var(--garnet))"};color:${S.copiedId===g.id?"var(--night)":"var(--cream)"};font-family:Syne,sans-serif;font-weight:700;font-size:14px;">${S.copiedId===g.id?"✓ Copied!":"🔗 Share invite"}</button>
+        <div style="margin-top:7px;font-size:10.5px;color:var(--mdim);text-align:center;">buddy://join/${g.code}</div>
+      </div>`).join("")}
+
+    <div style="display:flex;gap:8px;margin-bottom:24px;">
+      <input id="newGroupInput" placeholder="New group name…" onkeydown="if(event.key==='Enter')createGroup()" oninput="S.newGroup=this.value" value="${escH(S.newGroup)}" style="flex:1;background:var(--night);border:1px dashed var(--line);border-radius:999px;padding:10px 14px;color:var(--cream);font-size:13px;"/>
+      <button onclick="createGroup()" style="background:var(--amber);border:none;border-radius:999px;padding:0 18px;color:var(--night);font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">+ Create</button>
+    </div>
+
+    <div style="background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;">
+      <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;font-weight:700;">Powered by</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.9;">🤖 Claude Sonnet 4.6<br/>🗺 OpenStreetMap & CARTO dark tiles<br/>🌐 Anthropic API · real-time translation<br/><span style="font-size:10.5px;">Deploy to Google Play via Capacitor.js TWA</span></div>
+    </div>
+  </div>`;
+}
+
+// ── EMPTY STATE HELPER ────────────────────────────────────────────────────────
+function renderNoCity(msg){
+  return `<div class="rise" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:24px;">
+    <div style="font-size:44px;margin-bottom:14px;">✈️</div>
+    <div style="font-family:Syne,sans-serif;font-weight:800;font-size:20px;color:var(--cream);margin-bottom:8px;">No trip selected</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6;">${msg}</div>
+    <button onclick="S.showPicker=true;r()" style="padding:12px 26px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:var(--cream);font-family:Syne,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">+ New trip</button>
+  </div>`;
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+function toggleSave(id){ S.saved=S.saved.includes(id)?S.saved.filter(x=>x!==id):[...S.saved,id]; r(); }
+function toggleDone(id){ S.done=S.done.includes(id)?S.done.filter(x=>x!==id):[...S.done,id]; r(); }
+
+function toggleSteps(){
+  S.stepsActive = !S.stepsActive;
+  if(S.stepsActive && typeof DeviceMotionEvent!=="undefined" && DeviceMotionEvent.requestPermission){
+    DeviceMotionEvent.requestPermission()
+      .then(p=>{ if(p==="granted") window.addEventListener("devicemotion",handleMotion,{passive:true}); })
+      .catch(()=>{});
+  }
+  r();
+}
+function handleMotion(e){
+  if(!S.stepsActive) return;
+  const a = e.accelerationIncludingGravity; if(!a) return;
+  const mag = Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);
+  const now = Date.now();
+  if(S.lastAccMag!==null && mag>12 && (now-S.stepCooldown)>400){
+    S.steps++;
+    S.stepCooldown=now;
+    // lightweight update: just the text nodes, not full re-render
+    const stepEl = document.getElementById("stepCount");
+    if(stepEl) stepEl.textContent = "👟 "+S.steps.toLocaleString();
+  }
+  S.lastAccMag = mag;
+}
+
+function createGroup(){
+  const n = S.newGroup.trim(); if(!n) return;
+  const id = Date.now();
+  S.groups.push({id,name:n,members:[S.username||"You"],code:Math.random().toString(36).slice(2,7)});
+  S.msgs[id]=[]; S.activeGroup=id; S.newGroup=""; r();
+}
+function delGroup(id){
+  if(S.confirmDel!==id){ S.confirmDel=id; r(); return; }
+  S.groups=S.groups.filter(g=>g.id!==id); delete S.msgs[id];
+  if(S.activeGroup===id) S.activeGroup=S.groups[0]?.id||null;
+  S.confirmDel=null; r();
+}
+function addMember(gid){
+  const el=document.getElementById("mem_"+gid); const n=(el?.value||"").trim(); if(!n) return;
+  S.groups=S.groups.map(g=>g.id===gid&&!g.members.includes(n)?{...g,members:[...g.members,n]}:g);
+  r();
+}
+function remMember(gid,n){
+  S.groups=S.groups.map(g=>g.id===gid?{...g,members:g.members.filter(m=>m!==n)}:g); r();
+}
+function shareGroup(id){
+  const g=S.groups.find(x=>x.id===id); if(!g) return;
+  const text=`Join my travel crew on Buddy!\nGroup: ${g.name} · Code: ${g.code}`;
+  if(navigator.share) navigator.share({title:`Join ${g.name} on Buddy`,text}).catch(()=>{});
+  else navigator.clipboard.writeText(text).then(()=>{S.copiedId=id;r();setTimeout(()=>{S.copiedId=null;r();},2500);}).catch(()=>{});
+}
+function shareSpot(id){
+  const s=spots().find(x=>x.id===id); if(!s) return;
+  const m=meta();
+  const text=`${s.name} — ${s.area}, ${m.name||""}\n${s.vibe.slice(0,100)}…`;
+  if(navigator.share) navigator.share({title:s.name,text}).catch(()=>{});
+  else navigator.clipboard.writeText(text).catch(()=>{});
+}
+
+async function matchVibe(){
+  const v=S.vibeInput.trim(); if(!v||S.vibeLoading) return;
+  S.vibeLoading=true; S.vibeResult=null; r();
+  try{
+    const raw=await callClaude(`You are a ${meta().name} nightlife expert. Match up to 5 spots to this vibe. Return ONLY valid JSON with no markdown.\nSpots:${JSON.stringify(spots().map(s=>({id:s.id,name:s.name,type:s.type,area:s.area,vibe:s.vibe})))}\nVibe:"${v}"\n{"summary":"one sentence vibe summary","matches":[{"id":1,"reason":"why this spot fits"}]}`);
+    S.vibeResult=JSON.parse(raw);
+  } catch { S.vibeResult={summary:"Couldn't read the vibe — try again.",matches:[]}; }
+  S.vibeLoading=false; r();
+}
+
+async function genIti(){
+  const sp=spots().filter(s=>S.saved.includes(s.id));
+  if(!sp.length||S.itiLoading) return;
+  S.itiLoading=true; S.itiResult=null; r();
+  try{
+    const raw=await callClaude(`You are a ${meta().name} night planner. Build a flowing evening itinerary from these saved spots. Food/drinks first, clubs last. Return ONLY valid JSON.\nSpots:${JSON.stringify(sp.map(s=>({id:s.id,name:s.name,type:s.type,area:s.area,open:s.open,vibe:s.vibe})))}\n{"title":"3-5 word catchy title","intro":"one sentence","stops":[{"id":1,"time":"19:00","tip":"insider tip for this stop"}]}`);
+    S.itiResult=JSON.parse(raw);
+  } catch { S.itiResult={title:"Try again",intro:"Something went wrong.",stops:[]}; }
+  S.itiLoading=false; r();
+}
+
+// ── POST-RENDER BINDINGS ──────────────────────────────────────────────────────
+function bindAfterRender(){
+  if(S.tab==="map" && S.started && S.cityKey){
+    requestAnimationFrame(()=>{ initMap(); setTimeout(initMap,200); setTimeout(initMap,600); });
+  }
+  if(S.tab==="chat"){
+    setTimeout(()=>{ const ml=document.getElementById("msgList"); if(ml) ml.scrollTop=ml.scrollHeight; },60);
+  }
+}
+
+// ── UTILITY ───────────────────────────────────────────────────────────────────
+function escH(s){
+  if(typeof s !== "string") return String(s||"");
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+
+function setFilter(btn, isMap){
+  S.filter = btn.getAttribute("data-f");
+  if(isMap) updateMapPins();
+  else r();
+}
+
+r();
+</script>
+</body>
+</html>
