@@ -140,6 +140,9 @@ const S = {
   lastAccMag: null,
   stepCooldown: 0,
   showPicker: false,
+  citySearch: "",
+  citySearchLoading: false,
+  citySearchError: null,
   cityCache: {},
   cityLoading: null,
   cityLoadError: false,
@@ -312,41 +315,96 @@ function cancelCityLoad(){ S.cityLoading = null; S.cityLoadError = false; r(); }
 
 // ── CITY PICKER ───────────────────────────────────────────────────────────────
 function renderPicker(){
-  return `<div class="fadeIn" style="height:100vh;height:100dvh;display:flex;flex-direction:column;background:var(--night);">
-    <div style="padding:16px 18px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:var(--panel);">
-      <div>
-        <div style="font-weight:800;font-size:18px;color:var(--cream);">Choose a city</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">AI generates a guide on first visit</div>
-      </div>
-      <button onclick="S.showPicker=false;r()" style="background:none;border:none;color:var(--muted);font-size:28px;line-height:1;padding:0 4px;">×</button>
-    </div>
-    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 32px;">
-      ${REGIONS.map(reg=>{
-        const validCities = reg.cities.filter(k => CITY_META[k]);
-        if(!validCities.length) return "";
-        return `<div style="margin-bottom:22px;">
-          <div style="font-size:10.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--line);">${reg.emoji} ${reg.label} · ${validCities.length}</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
-            ${validCities.map(key=>{
-              const m = CITY_META[key];
-              const curr = S.cityKey===key;
-              const loaded = !!S.cityCache[key];
-              return `<div onclick="switchCity('${key}')" style="background:${curr?"var(--panel2)":"var(--panel)"};border:1px solid ${curr?"var(--garnet)":"var(--line)"};border-radius:12px;padding:10px 11px;cursor:pointer;transition:border-color .15s;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
-                  <span style="font-size:20px;">${m.flag}</span>
-                  ${curr ? "<span style='font-size:12px;color:var(--garnet);'>✦</span>" : ""}
-                  ${!loaded&&!curr ? "<span style='font-size:8px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 5px;letter-spacing:.04em;'>AI</span>" : ""}
-                </div>
-                <div style="font-weight:700;font-size:12.5px;color:var(--cream);line-height:1.2;">${m.name}</div>
-                <div style="font-size:10px;color:var(--muted);margin-top:2px;">${m.country}</div>
-              </div>`;
-            }).join("")}
-          </div>
-        </div>`;
-      }).join("")}
-    </div>
-  </div>`;
+  return '<div class="fadeIn" style="height:100vh;height:100dvh;display:flex;flex-direction:column;background:var(--night);">'
+
+    // Header
+    +'<div style="padding:14px 16px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:var(--panel);">'
+    +'<div><div style="font-weight:800;font-size:18px;color:var(--cream);">Where to?</div>'
+    +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">Search any city or pick from the list</div></div>'
+    +'<button onclick="S.showPicker=false;r()" style="background:none;border:none;color:var(--muted);font-size:28px;line-height:1;padding:0 4px;">×</button>'
+    +'</div>'
+
+    // Search bar — oninput does NOT call r()
+    +'<div style="padding:12px 14px;border-bottom:1px solid var(--line);flex-shrink:0;background:var(--panel);">'
+    +'<div style="display:flex;gap:8px;">'
+    +'<input id="citySearchInput" value="'+escH(S.citySearch)+'" placeholder="Search any city — Tokyo, Medellín, Reykjavík…" oninput="S.citySearch=this.value" onkeydonkeydown="handleSearchKey(event)"" style="flex:1;background:var(--panel2);border:1px solid '+(S.citySearchError?'#C03546':'var(--line)')+';border-radius:999px;padding:10px 16px;color:var(--cream);font-size:13.5px;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>'
+    +'<button id="citySearchBtn" onclick="searchCity()" style="flex-shrink:0;background:'+(S.citySearchLoading?'var(--panel2)':'linear-gradient(90deg,var(--sap),var(--garnet))')+';border:none;border-radius:999px;padding:0 18px;color:'+(S.citySearchLoading?'var(--muted)':'#FFFFFF')+';font-weight:700;font-size:13px;cursor:pointer;min-width:80px;">'+(S.citySearchLoading?'…':'Search')+'</button>'
+    +'</div>'
+    +'<div id="searchResultArea"></div>'
+    +(S.citySearchError?'<div style="margin-top:8px;padding:10px 14px;background:rgba(192,53,70,.1);border:1px solid rgba(192,53,70,.3);border-radius:12px;font-size:12.5px;color:#C03546;">'+escH(S.citySearchError)+'</div>':'')
+    +'</div>'
+
+    // Browse list
+    +'<div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 32px;">'
+    +'<div style="font-size:10.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:12px;">Popular cities</div>'
+    + REGIONS.map(function(reg){
+        var validCities = reg.cities.filter(function(k){ return !!CITY_META[k]; });
+        if(!validCities.length) return '';
+        return '<div style="margin-bottom:22px;">'
+          +'<div style="font-size:10.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--line);">'+reg.emoji+' '+reg.label+' \xb7 '+validCities.length+'</div>'
+          +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">'
+          + validCities.map(function(key){
+              var m=CITY_META[key], curr=S.cityKey===key, loaded=!!(S.cityCache[key]||PRE[key]);
+              return '<div data-citykey="'+key+'" onclick="pickCity(this)" style="background:'+(curr?'var(--panel2)':'var(--panel)')+';border:1px solid '+(curr?'var(--garnet)':'var(--line)')+';border-radius:12px;padding:10px 11px;cursor:pointer;">'
+                +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">'
+                +'<span style="font-size:20px;">'+m.flag+'</span>'
+                +(curr?'<span style="font-size:12px;color:var(--garnet);">❖</span>':'')
+                +(!loaded&&!curr?'<span style="font-size:8px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 5px;">AI</span>':'')
+                +'</div>'
+                +'<div style="font-weight:700;font-size:12.5px;color:var(--cream);line-height:1.2;">'+m.name+'</div>'
+                +'<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+m.country+'</div>'
+                +'</div>';
+            }).join('')
+          +'</div></div>';
+      }).join('')
+    +'</div>'
+    +'</div>';
 }
+
+async function searchCity(){
+  var q = S.citySearch.trim();
+  if(!q || S.citySearchLoading) return;
+
+  // Derive key from typed text — no API call needed
+  var key = q.toLowerCase().replace(/[^a-z0-9\s]/g,'').trim().replace(/\s+/g,'_').slice(0,30);
+
+  // Register minimal metadata
+  if(!CITY_META[key]){
+    CITY_META[key] = {
+      name: q.replace(/\b\w/g, function(c){ return c.toUpperCase(); }),
+      country:'', flag:'🌍', currency:'', timezone:'', center:[0,0], tagline:''
+    };
+  }
+
+  // Show loading state without destroying input
+  var btn = document.getElementById('citySearchBtn');
+  if(btn){ btn.textContent='…'; btn.style.background='var(--panel2)'; btn.style.color='var(--muted)'; }
+  var area = document.getElementById('searchResultArea');
+  if(area) area.innerHTML='<div style="margin-top:8px;padding:10px 14px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;font-size:12.5px;color:var(--muted);">Building guide for <strong style="color:var(--cream);">'+escH(CITY_META[key].name)+'</strong>…</div>';
+
+  S.citySearch=''; S.citySearchError=null;
+  switchCity(key);
+}
+
+function handleSearchKey(e){
+  if(e.key==='Enter'){ e.preventDefault(); searchCity(); }
+}
+
+
+function pickCity(el){
+  var key = el.getAttribute('data-citykey');
+  if(key) switchCity(key);
+}
+
+
+function clearSearch(){
+  S.citySearch=''; S.citySearchError=null;
+  var el=document.getElementById('citySearchInput');
+  if(el){ el.value=''; el.focus(); }
+  var area=document.getElementById('searchResultArea');
+  if(area) area.innerHTML='';
+}
+
 
 function safeParseJSON(raw){
   if(!raw) return null;
@@ -522,11 +580,11 @@ function renderTranslator(){
         var isOut=entry.dir==="out";
         return '<div style="display:flex;justify-content:'+(isOut?"flex-end":"flex-start")+';">'
           +'<div style="max-width:82%;padding:10px 14px;border-radius:14px;'
-          +(isOut?"border-bottom-right-radius:4px;background:var(--sap);border:1px solid var(--garnet)":"border-bottom-left-radius:4px;background:var(--panel2);border:1px solid var(--line)")
+          +(isOut?"border-bottom-right-radius:4px;background:var(--sap);border:1px solid var(--garnet);color:#FFFFFF":"border-bottom-left-radius:4px;background:var(--panel2);border:1px solid var(--line);color:var(--cream)")
           +'">'
           +'<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">'+(isOut?"You to "+lang:"Detected: "+entry.detectedLang+" to English")+'</div>'
           +'<div style="font-size:13.5px;color:var(--cream);line-height:1.5;">'+entry.original+'</div>'
-          +'<div style="font-size:13.5px;color:var(--amber);line-height:1.5;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.1);">'+entry.translated+'</div>'
+          +'<div style="font-size:13.5px;color:rgba(255,240,180,.95);line-height:1.5;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.2);">'+entry.translated+'</div>'
           +'</div></div>';
       }).join(""); })()}
       ${S.transListening ? `
