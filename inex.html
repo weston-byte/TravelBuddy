@@ -965,30 +965,39 @@ function renderYou(){
     <div style="font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Your groups</div>
     ${S.groups.length===0?`<div style="background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:14px;font-size:13px;color:var(--muted);margin-bottom:12px;">No groups yet — create one below.</div>`:""}
     ${S.groups.map(function(g){
-      var isActive=S.activeGroup===g.id,isConfirm=S.confirmDel===g.id,isCopied=S.copiedId===g.id;
-      var mems=g.members.map(function(mem){
+      var active=S.activeGroup===g.id;
+      var confirm=S.confirmDel===g.id;
+      var copied=S.copiedId===g.id;
+      var memberHtml=g.members.map(function(mem){
         var canRm=mem!=="You"&&mem!==S.username;
-        return '<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--cream);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;"><span style="width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,var(--garnet),var(--amber));display:grid;place-items:center;font-size:8px;font-weight:800;color:var(--night);">'+mem[0].toUpperCase()+'</span>'+escH(mem)+(canRm?'<button onclick="remMember('+g.id+',''+mem+'')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0;">&#215;</button>':'')+'</span>';
-      }).join('');
-      return '<div style="background:var(--panel);border:1px solid '+(isActive?'var(--garnet)':'var(--line)')+';border-radius:16px;padding:14px;margin-bottom:12px;">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
-        +'<div style="font-weight:700;font-size:15px;color:var(--cream);">'+escH(g.name)+' <span style="font-size:11px;color:var(--muted);font-weight:400;">'+g.members.length+' member'+(g.members.length===1?'':'s')+'</span></div>'
-        +'<button onclick="delGroup('+g.id+')" style="background:'+(isConfirm?'var(--garnet)':'none')+';border:1px solid '+(isConfirm?'var(--garnet)':'var(--line)')+';border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;color:'+(isConfirm?'var(--cream)':'var(--muted)')+';cursor:pointer;font-family:inherit;">'+(isConfirm?'Tap again':'Delete')+'</button>'
-        +'</div>'
-        +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">'+mems+'</div>'
-        +'<div style="display:flex;gap:8px;margin-bottom:12px;"><input id="mem_'+g.id+'" placeholder="Add member..." onkeydown="if(event.key==='Enter')addMember('+g.id+')" style="flex:1;background:var(--night);border:1px solid var(--line);border-radius:999px;padding:8px 14px;color:var(--cream);font-size:12.5px;"/><button onclick="addMember('+g.id+')" style="background:transparent;border:1px solid var(--amber);border-radius:999px;padding:0 16px;color:var(--amber);font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;">Add</button></div>'
-        +'<button onclick="shareGroup('+g.id+')" style="width:100%;padding:12px 0;border-radius:12px;border:none;cursor:pointer;background:'+(isCopied?'var(--live)':'linear-gradient(90deg,var(--sap),var(--garnet))')+';color:'+(isCopied?'var(--night)':'var(--cream)')+';font-weight:700;font-size:14px;">'+(isCopied?'Copied!':'Share invite')+'</button>'
-        +'<div style="margin-top:7px;font-size:10.5px;color:var(--mdim);text-align:center;">buddy://join/'+g.code+'</div>'
-        +'</div>';
+        var rmBtn=canRm?"<button onclick=\"remMember("+g.id+",'"+mem+"')\" style=\"background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0;\">&#215;</button>":"";
+        return "<span style=\"display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--cream);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;\">"
+          +"<span style=\"width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,var(--garnet),var(--amber));display:grid;place-items:center;font-size:8px;font-weight:800;color:var(--night);\">"
+          +mem[0].toUpperCase()+"</span>"+escH(mem)+rmBtn+"</span>";
+      }).join("");
+      var borderCol=active?"var(--garnet)":"var(--line)";
+      var delBg=confirm?"var(--garnet)":"none";
+      var delBorder=confirm?"var(--garnet)":"var(--line)";
+      var delColor=confirm?"var(--cream)":"var(--muted)";
+      var delLabel=confirm?"Tap again":"Delete";
+      var shareBg=copied?"var(--live)":"linear-gradient(90deg,var(--sap),var(--garnet))";
+      var shareColor=copied?"var(--night)":"var(--cream)";
+      var shareLabel=copied?"Copied!":"Share invite";
+      return "<div style=\"background:var(--panel);border:1px solid "+borderCol+";border-radius:16px;padding:14px;margin-bottom:12px;\">"
+        +"<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;\">"
+        +"<div style=\"font-weight:700;font-size:15px;color:var(--cream);\">"+escH(g.name)
+        +" <span style=\"font-size:11px;color:var(--muted);font-weight:400;\">"+g.members.length+" member"+(g.members.length===1?"":"s")+"</span></div>"
+        +"<button onclick=\"delGroup("+g.id+")\" style=\"background:"+delBg+";border:1px solid "+delBorder+";border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;color:"+delColor+";cursor:pointer;font-family:inherit;\">"+delLabel+"</button>"
+        +"</div>"
+        +"<div style=\"display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;\">"+memberHtml+"</div>"
+        +"<div style=\"display:flex;gap:8px;margin-bottom:12px;\">"
+        +"<input id=\"mem_"+g.id+"\" placeholder=\"Add member...\" onkeydown=\"if(event.key==='Enter')addMember("+g.id+")\" style=\"flex:1;background:var(--night);border:1px solid var(--line);border-radius:999px;padding:8px 14px;color:var(--cream);font-size:12.5px;\"/>"
+        +"<button onclick=\"addMember("+g.id+")\" style=\"background:transparent;border:1px solid var(--amber);border-radius:999px;padding:0 16px;color:var(--amber);font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;\">Add</button>"
+        +"</div>"
+        +"<button onclick=\"shareGroup("+g.id+")\" style=\"width:100%;padding:12px 0;border-radius:12px;border:none;cursor:pointer;background:"+shareBg+";color:"+shareColor+";font-weight:700;font-size:14px;\">"+shareLabel+"</button>"
+        +"<div style=\"margin-top:7px;font-size:10.5px;color:var(--mdim);text-align:center;\">buddy://join/"+g.code+"</div>"
+        +"</div>";
     }).join("")}
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <input id="mem_${g.id}" placeholder="Add member…" onkeydown="if(event.key==='Enter')addMember(${g.id})" style="flex:1;background:var(--night);border:1px solid var(--line);border-radius:999px;padding:8px 14px;color:var(--cream);font-size:12.5px;"/>
-          <button onclick="addMember(${g.id})" style="background:transparent;border:1px solid var(--amber);border-radius:999px;padding:0 16px;color:var(--amber);font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;">Add</button>
-        </div>
-        <button onclick="shareGroup(${g.id})" style="width:100%;padding:12px 0;border-radius:12px;border:none;cursor:pointer;background:${S.copiedId===g.id?"var(--live)":"linear-gradient(90deg,var(--sap),var(--garnet))"};color:${S.copiedId===g.id?"var(--night)":"var(--cream)"};font-weight:700;font-size:14px;">${S.copiedId===g.id?"✓ Copied!":"🔗 Share invite"}</button>
-        <div style="margin-top:7px;font-size:10.5px;color:var(--mdim);text-align:center;">buddy://join/${g.code}</div>
-      </div>`).join("")}
 
     <div style="display:flex;gap:8px;margin-bottom:24px;">
       <input id="newGroupInput" placeholder="New group name…" onkeydown="if(event.key==='Enter')createGroup()" oninput="S.newGroup=this.value" value="${escH(S.newGroup)}" style="flex:1;background:var(--night);border:1px dashed var(--line);border-radius:999px;padding:10px 14px;color:var(--cream);font-size:13px;"/>
