@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" style="color-scheme:light;">
+<html lang="en" style="color-scheme:light;background:#FFFFFF;" data-theme="light">
 <head>
 <meta charset="UTF-8"/>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="color-scheme" content="light"/>
 <title>Buddy — AI Travel Companion</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -13,7 +16,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:#F0EBF8;font-family:'Manrope',system-ui,sans-serif;overflow:hidden;position:fixed;width:100%}
+html,body{height:100%;background:#F0EBF8 !important;color:#1A0820 !important;font-family:'Manrope',system-ui,sans-serif;overflow:hidden;position:fixed;width:100%}
 :root{
   --night:#FFFFFF;--panel:#F7F3FB;--panel2:#EDE8F4;--panel3:#E4DCEF;--line:#D8CEEA;
   --garnet:#C03546;--sap:#8E1F36;--amber:#C87800;--cream:#1A0820;
@@ -24,7 +27,7 @@ html,body{height:100%;background:#F0EBF8;font-family:'Manrope',system-ui,sans-se
 .app{
   position:fixed;top:0;bottom:0;
   left:var(--sidebar-w);right:0;
-  background:var(--night);
+  background:#FFFFFF !important;
   display:flex;flex-direction:column;
   overflow:hidden;
   transition:left .25s ease;
@@ -37,7 +40,7 @@ html,body{height:100%;background:#F0EBF8;font-family:'Manrope',system-ui,sans-se
 .sidebar{
   position:fixed;top:0;bottom:0;left:0;
   width:var(--sidebar-w);
-  background:var(--panel);
+  background:#F7F3FB !important;
   border-right:1px solid var(--line);
   display:flex;flex-direction:column;
   align-items:center;
@@ -1894,4 +1897,287 @@ function renderYou() {
     return '<div style="background:var(--panel);border:1px solid ' + (isActive ? 'var(--garnet)' : 'var(--line)') + ';border-radius:16px;padding:14px;margin-bottom:12px;">' + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' + '<div style="font-weight:700;font-size:15px;color:var(--cream);">' + escH(g.name) + ' <span style="font-size:11px;color:var(--muted);font-weight:400;">' + g.members.length + ' member' + (g.members.length === 1 ? '' : 's') + '</span></div>' + '<button onclick="delGroup(' + g.id + ')" style="background:' + (isConfirm ? 'var(--garnet)' : 'none') + ';border:1px solid ' + (isConfirm ? 'var(--garnet)' : 'var(--line)') + ';border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;color:' + (isConfirm ? '#FFFFFF' : 'var(--muted)') + ';cursor:pointer;">' + (isConfirm ? 'Tap again' : 'Delete') + '</button>' + '</div>' + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">' + mems + '</div>' + '<div style="display:flex;gap:8px;margin-bottom:12px;">' + '<input id="mem_' + g.id + '" placeholder="Add member…" onkeydown="if(event.keyCode===13)addMember(' + g.id + ')" style="flex:1;background:var(--night);border:1px solid var(--line);border-radius:999px;padding:8px 14px;color:var(--cream);font-size:12.5px;"/>' + '<button onclick="addMember(' + g.id + ')" style="background:transparent;border:1px solid var(--amber);border-radius:999px;padding:0 16px;color:var(--amber);font-weight:700;font-size:12.5px;cursor:pointer;">Add</button>' + '</div>' + '<button onclick="shareGroup(' + g.id + ')" style="width:100%;padding:12px 0;border-radius:12px;border:none;cursor:pointer;background:' + (isCopied ? 'var(--live)' : 'linear-gradient(90deg,var(--sap),var(--garnet))') + ';color:' + (isCopied ? 'var(--night)' : '#FFFFFF') + ';font-weight:700;font-size:14px;">' + (isCopied ? 'Copied!' : 'Share invite') + '</button>' + '<div style="margin-top:7px;font-size:10.5px;color:var(--mdim);text-align:center;">buddy://join/' + g.code + '</div>' + '</div>';
   }).join('') + '<div style="display:flex;gap:8px;margin-bottom:20px;">' + '<input id="newGroupInput" placeholder="New group name…" onkeydown="if(event.keyCode===13)createGroup()" oninput="S.newGroup=this.value" value="' + escH(S.newGroup) + '" style="flex:1;background:var(--night);border:1px dashed var(--line);border-radius:999px;padding:10px 14px;color:var(--cream);font-size:13px;"/>' + '<button onclick="createGroup()" style="background:var(--amber);border:none;border-radius:999px;padding:0 18px;color:#FFFFFF;font-weight:800;font-size:13px;cursor:pointer;">+ Create</button>' + '</div>'
   // API key
-  + '<div style="background:var(--pa
+  + '<div style="background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;">' + '<div style="font-size:12px;font-weight:700;color:var(--cream);margin-bottom:4px;">🔑 Anthropic API Key</div>' + '<div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.5;">Override the built-in key if needed. Get one at <a href="https://console.anthropic.com" target="_blank" style="color:var(--garnet);">console.anthropic.com</a></div>' + '<div style="display:flex;gap:8px;">' + '<input id="apiKeyInput" type="password" placeholder="sk-ant-..." value="' + escH(localStorage.getItem('buddy_api_key') || '') + '" style="flex:1;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:9px 14px;color:var(--cream);font-size:12.5px;"/>' + '<button onclick="saveApiKey()" style="background:linear-gradient(90deg,var(--sap),var(--garnet));border:none;border-radius:999px;padding:0 16px;color:#FFFFFF;font-weight:700;font-size:12.5px;cursor:pointer;flex-shrink:0;">Save</button>' + '</div>' + '<div id="apiKeyStatus" style="margin-top:8px;font-size:11px;color:var(--live);">✓ Built-in key active</div>' + '</div>'
+  // Powered by
+  + '<div style="background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;">' + '<div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;font-weight:700;">Powered by</div>' + '<div style="font-size:12px;color:var(--muted);line-height:1.9;">🤖 Claude Sonnet 4.6<br/>🗺 OpenStreetMap & CARTO light tiles<br/>🌐 Anthropic API · real-time translation</div>' + '</div>' + '</div>';
+}
+
+// ── EMPTY STATE ───────────────────────────────────────────────────────────────
+function renderNoCity(msg) {
+  return '<div class="rise" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:24px;">' + '<div style="font-size:44px;margin-bottom:14px;">✈️</div>' + '<div style="font-weight:800;font-size:20px;color:var(--cream);margin-bottom:8px;">No trip selected</div>' + '<div style="font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6;">' + msg + '</div>' + '<button onclick="S.showPicker=true;r()" style="padding:12px 26px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--sap),var(--garnet));color:#FFFFFF;font-weight:700;font-size:14px;cursor:pointer;">+ New trip</button>' + '</div>';
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+function toggleSave(id) {
+  S.saved = S.saved.includes(id) ? S.saved.filter(function (x) {
+    return x !== id;
+  }) : [...S.saved, id];
+  r();
+}
+function toggleDone(id) {
+  S.done = S.done.includes(id) ? S.done.filter(function (x) {
+    return x !== id;
+  }) : [...S.done, id];
+  r();
+}
+function toggleSteps() {
+  S.stepsActive = !S.stepsActive;
+  if (S.stepsActive && typeof DeviceMotionEvent !== "undefined" && DeviceMotionEvent.requestPermission) {
+    DeviceMotionEvent.requestPermission().then(function (p) {
+      if (p === "granted") window.addEventListener("devicemotion", handleMotion, {
+        passive: true
+      });
+    }).catch(function () {});
+  }
+  r();
+}
+function handleMotion(e) {
+  if (!S.stepsActive) return;
+  var a = e.accelerationIncludingGravity;
+  if (!a) return;
+  var mag = Math.sqrt((a.x || 0) ** 2 + (a.y || 0) ** 2 + (a.z || 0) ** 2);
+  var now = Date.now();
+  if (S.lastAccMag !== null && mag > 12 && now - S.stepCooldown > 400) {
+    S.steps++;
+    S.stepCooldown = now;
+    var el = document.getElementById("stepCount");
+    if (el) el.firstChild.textContent = S.steps.toLocaleString();
+  }
+  S.lastAccMag = mag;
+}
+function createGroup() {
+  var n = S.newGroup.trim();
+  if (!n) return;
+  var id = Date.now();
+  S.groups.push({
+    id: id,
+    name: n,
+    members: [S.username || "You"],
+    code: Math.random().toString(36).slice(2, 7)
+  });
+  S.msgs[id] = [];
+  S.activeGroup = id;
+  S.newGroup = "";
+  r();
+}
+function delGroup(id) {
+  if (S.confirmDel !== id) {
+    S.confirmDel = id;
+    r();
+    return;
+  }
+  S.groups = S.groups.filter(function (g) {
+    return g.id !== id;
+  });
+  delete S.msgs[id];
+  if (S.activeGroup === id) S.activeGroup = (S.groups[0] || {}).id || null;
+  S.confirmDel = null;
+  r();
+}
+function addMember(gid) {
+  var el = document.getElementById("mem_" + gid);
+  var n = (el && el.value || "").trim();
+  if (!n) return;
+  S.groups = S.groups.map(function (g) {
+    return g.id === gid && !g.members.includes(n) ? Object.assign({}, g, {
+      members: g.members.concat([n])
+    }) : g;
+  });
+  r();
+}
+function remMember(gid, n) {
+  S.groups = S.groups.map(function (g) {
+    return g.id === gid ? Object.assign({}, g, {
+      members: g.members.filter(function (m) {
+        return m !== n;
+      })
+    }) : g;
+  });
+  r();
+}
+function shareGroup(id) {
+  var g = S.groups.find(function (x) {
+    return x.id === id;
+  });
+  if (!g) return;
+  var text = "Join my travel crew on Buddy!\nGroup: " + g.name + " · Code: " + g.code;
+  if (navigator.share) navigator.share({
+    title: "Join " + g.name,
+    text: text
+  }).catch(function () {});else navigator.clipboard.writeText(text).then(function () {
+    S.copiedId = id;
+    r();
+    setTimeout(function () {
+      S.copiedId = null;
+      r();
+    }, 2500);
+  }).catch(function () {});
+}
+function shareSpot(id) {
+  var s = spots().find(function (x) {
+    return x.id === id;
+  });
+  if (!s) return;
+  var m = meta();
+  var text = s.name + " — " + s.area + ", " + (m.name || "") + "\n" + s.vibe.slice(0, 100) + "…";
+  if (navigator.share) navigator.share({
+    title: s.name,
+    text: text
+  }).catch(function () {});else navigator.clipboard.writeText(text).catch(function () {});
+}
+async function matchVibe() {
+  var v = S.vibeInput.trim();
+  if (!v || S.vibeLoading) return;
+  S.vibeLoading = true;
+  S.vibeResult = null;
+  r();
+  try {
+    var profile = "User is: " + S.userAge + ", " + S.userGender + ", likes " + S.userVibe + ", pace: " + S.userPace + ".";
+    var raw = await callClaude('You are a ' + meta().name + ' nightlife expert. ' + profile + ' Match up to 5 spots to this vibe. Return ONLY valid JSON.\nSpots:' + JSON.stringify(spots().map(function (s) {
+      return {
+        id: s.id,
+        name: s.name,
+        type: s.type,
+        area: s.area,
+        vibe: s.vibe
+      };
+    })) + '\nVibe:"' + v + '"\n{"summary":"one sentence","matches":[{"id":1,"reason":"why"}]}');
+    S.vibeResult = safeParseJSON(raw);
+  } catch (e) {
+    S.vibeResult = {
+      summary: "Couldn't match — try again.",
+      matches: []
+    };
+  }
+  S.vibeLoading = false;
+  r();
+}
+async function genIti() {
+  var sp = spots().filter(function (s) {
+    return S.saved.includes(s.id);
+  });
+  if (!sp.length || S.itiLoading) return;
+  S.itiLoading = true;
+  S.itiResult = null;
+  r();
+  try {
+    var profile = "User is: " + S.userAge + ", " + S.userGender + ", likes " + S.userVibe + ", pace: " + S.userPace + ".";
+    var raw = await callClaude('You are a ' + meta().name + ' night planner. ' + profile + ' Build a personalised evening itinerary. Food first, clubs last. Return ONLY valid JSON.\nSpots:' + JSON.stringify(sp.map(function (s) {
+      return {
+        id: s.id,
+        name: s.name,
+        type: s.type,
+        area: s.area,
+        open: s.open,
+        vibe: s.vibe
+      };
+    })) + '\n{"title":"catchy title","intro":"one sentence","stops":[{"id":1,"time":"19:00","tip":"tip"}]}');
+    S.itiResult = safeParseJSON(raw);
+  } catch (e) {
+    S.itiResult = {
+      title: "Try again",
+      intro: "Something went wrong.",
+      stops: []
+    };
+  }
+  S.itiLoading = false;
+  r();
+}
+
+// ── BIND ──────────────────────────────────────────────────────────────────────
+function bindAfterRender() {
+  if (S.tab === "map" && S.started && S.cityKey) {
+    requestAnimationFrame(function () {
+      initMap();
+      setTimeout(initMap, 200);
+      setTimeout(initMap, 600);
+    });
+  }
+  if (S.tab === "chat") {
+    setTimeout(function () {
+      var ml = document.getElementById("msgList");
+      if (ml) ml.scrollTop = ml.scrollHeight;
+    }, 60);
+  }
+  if (S.transOpen) {
+    setTimeout(function () {
+      var h = document.getElementById("transHistory");
+      if (h) h.scrollTop = h.scrollHeight;
+    }, 60);
+  }
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────function clearVibe(){ S.vibeResult=null; S.vibeInput=""; r(); }
+
+function removePlanEl(el) {
+  try {
+    var day = decodeURIComponent(escape(atob(el.getAttribute('data-rday'))));
+    var id = el.getAttribute('data-rid');
+    var isCustom = el.getAttribute('data-rcust') == 'true';
+    removePlanItem(day, id, isCustom);
+  } catch (e) {}
+}
+function goToYou() {
+  S.tab = 'you';
+  r();
+}
+function toggleSpotEl(el) {
+  var id = parseInt(el.getAttribute('data-sid'));
+  S.openSpot = S.openSpot === id ? null : id;
+  r();
+}
+function shareSpotEl(el) {
+  var p = el.closest('[data-sid]');
+  if (p) shareSpot(parseInt(p.getAttribute('data-sid')));
+}
+function toggleSaveEl(el) {
+  var p = el.closest('[data-sid]');
+  if (p) toggleSave(parseInt(p.getAttribute('data-sid')));
+}
+function setGroupEl(el) {
+  S.activeGroup = parseInt(el.getAttribute('data-gid'));
+  r();
+}
+function delGroupEl(el) {
+  delGroup(parseInt(el.getAttribute('data-gid')));
+}
+function addMemberEl(el) {
+  addMember(parseInt(el.getAttribute('data-gid')));
+}
+function shareGroupEl(el) {
+  shareGroup(parseInt(el.getAttribute('data-gid')));
+}
+function addPlanItemEl(el) {
+  addPlanItem(el.getAttribute('data-day'));
+}
+function cancelAddPlanEl(el) {
+  S.addingPlan[el.getAttribute('data-day')] = false;
+  r();
+}
+function startAddPlanEl(el) {
+  S.addingPlan[el.getAttribute('data-day')] = true;
+  r();
+}
+function toggleListening() {
+  if (S.transListening) stopListening();else startListening();
+}
+function switchTabEl(el) {
+  switchTab(el.getAttribute('data-tab'));
+}
+function selectProfileEl(el) {
+  selectProfileOpt(el.getAttribute('data-qid'), el.getAttribute('data-opt'));
+}
+function toggleDoneEl(el) {
+  toggleDone(el.getAttribute('data-done'));
+}
+function remMemberEl(el) {
+  remMember(+el.getAttribute('data-gid'), el.getAttribute('data-mem'));
+}
+window.addEventListener("devicemotion", handleMotion, {
+  passive: true
+});
+r();
+
+</script>
+</body>
+</html>
