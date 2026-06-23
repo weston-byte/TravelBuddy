@@ -1267,8 +1267,8 @@ async function callClaude(prompt, maxTokens) {
     "Content-Type": "application/json",
     "anthropic-version": "2023-06-01"
   };
-  if (key) headers["x-api-key"] = key;
-  var res = await fetch("https://api.anthropic.com/v1/messages", {
+  // key sent via Apps Script proxy
+  var res = await fetch("https://script.google.com/macros/s/AKfycbwsZFRa-FF0NHkzxEx2bCGRjQGbfB-FUAdmDU3wywitCjFdudM2hx-7jF4kx7EMMO-3OA/exec", {
     method: "POST",
     headers: headers,
     body: JSON.stringify({
