@@ -1641,7 +1641,7 @@ function renderMain() {
   + '<div style="padding:11px 16px 9px;border-bottom:1px solid var(--line);background:var(--panel);flex-shrink:0;">' + '<div style="display:flex;justify-content:space-between;align-items:center;">' + '<div style="font-weight:800;font-size:20px;color:var(--cream);">Buddy <span style="color:var(--garnet);">✦</span></div>' + '<button onclick="S.showPicker=true;r()" style="display:flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid ' + (hasCity ? 'var(--garnet)' : 'var(--line)') + ';border-radius:999px;padding:6px 13px;cursor:pointer;">' + '<span style="font-size:14px;">' + (hasCity ? m.flag || '🌍' : '＋') + '</span>' + '<span style="font-size:12px;color:var(--cream);font-weight:600;">' + (hasCity ? m.name || '...' : 'New trip') + '</span>' + '<span style="font-size:9px;color:var(--muted);">▾</span>' + '</button>' + '</div>' + '</div>'
 
   // BODY
-  + '<div id="mainBody" style="flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;min-height:0;padding:' + (S.tab === "map" ? '0' : '14px') + ';display:flex;flex-direction:column;">' + (S.tab === "explore" ? renderExplore() : '') + (S.tab === "map" ? renderMap() : '') + (S.tab === "saved" ? renderSaved() : '') + (S.tab === "plan" ? renderPlan() : '') + (S.tab === "chat" ? renderChat() : '') + (S.tab === "you" ? renderYou() : '') + '</div>' + (S.tab === "chat" && S.groups.length > 0 ? renderChatComposer() : '') + '</div>';
+  + '<div id="mainBody" style="' + (S.tab === "map" ? "flex:1;overflow:hidden;padding:0;display:flex;flex-direction:column;" : "flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;min-height:0;padding:14px;") + '">' + (S.tab === "explore" ? renderExplore() : '') + (S.tab === "map" ? renderMap() : '') + (S.tab === "saved" ? renderSaved() : '') + (S.tab === "plan" ? renderPlan() : '') + (S.tab === "chat" ? renderChat() : '') + (S.tab === "you" ? renderYou() : '') + '</div>' + (S.tab === "chat" && S.groups.length > 0 ? renderChatComposer() : '') + '</div>';
 }
 function switchTab(t) {
   S.tab = t;
@@ -1690,7 +1690,7 @@ function renderMap() {
   var tr = spotTypes();
   return '<div style="display:flex;flex-direction:column;flex:1;min-height:0;">' + '<div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 14px 8px;flex-shrink:0;background:var(--panel);border-bottom:1px solid var(--line);">' + tr.map(function (t) {
     return '<button data-f="' + t + '" onclick="setFilter(this,true)" style="flex-shrink:0;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ' + (S.filter === t ? 'var(--garnet)' : 'var(--line)') + ';background:' + (S.filter === t ? 'var(--sap)' : 'transparent') + ';color:' + (S.filter === t ? '#FFFFFF' : 'var(--muted)') + ';">' + t + '</button>';
-  }).join('') + '</div>' + '<div id="leafletMap" style="flex:1;width:100%;min-height:200px;"></div>' + '<div style="padding:10px 14px 12px;flex-shrink:0;background:var(--panel);border-top:1px solid var(--line);">' + '<input type="range" min="0" max="5" value="' + S.timeIdx + '" oninput="S.timeIdx=+this.value;updateMapPins()" style="width:100%;"/>' + '<div style="display:flex;justify-content:space-between;font-size:10.5px;margin-top:4px;">' + TIMES.map(function (t, i) {
+  }).join('') + '</div>' + '<div id="leafletMapWrap" style="flex:1;position:relative;min-height:200px;"><div id="leafletMap" style="position:absolute;top:0;left:0;right:0;bottom:0;"></div></div>' + '<div style="padding:10px 14px 12px;flex-shrink:0;background:var(--panel);border-top:1px solid var(--line);">' + '<input type="range" min="0" max="5" value="' + S.timeIdx + '" oninput="S.timeIdx=+this.value;updateMapPins()" style="width:100%;"/>' + '<div style="display:flex;justify-content:space-between;font-size:10.5px;margin-top:4px;">' + TIMES.map(function (t, i) {
     return '<span style="color:' + (i === S.timeIdx ? 'var(--amber)' : 'var(--muted)') + ';font-weight:' + (i === S.timeIdx ? 700 : 400) + ';">' + t + '</span>';
   }).join('') + '</div></div></div>';
 }
@@ -1728,12 +1728,10 @@ function initMap() {
     S.mapInstance = map;
     S.mapInited = true;
     placeMapPins(map);
-    setTimeout(function () {
-      if (S.mapInstance) S.mapInstance.invalidateSize();
-    }, 150);
-    setTimeout(function () {
-      if (S.mapInstance) S.mapInstance.invalidateSize();
-    }, 600);
+    setTimeout(function () { if (S.mapInstance) S.mapInstance.invalidateSize(); }, 100);
+    setTimeout(function () { if (S.mapInstance) S.mapInstance.invalidateSize(); }, 300);
+    setTimeout(function () { if (S.mapInstance) S.mapInstance.invalidateSize(); }, 800);
+    setTimeout(function () { if (S.mapInstance) S.mapInstance.invalidateSize(); }, 1500);
   } catch (e) {
     console.error("Map init failed:", e);
   }
