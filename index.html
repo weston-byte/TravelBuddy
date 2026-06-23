@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="color-scheme" content="light"/>
-<title>Buddy — AI Travel Companion</title>
+<title>Buddy v4 — AI Travel Companion</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -120,7 +120,8 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <div class="app" id="app"></div>
 
-<script>
+<script>console.log("Buddy v4 loaded OK");
+
 // ── API KEY ───────────────────────────────────────────────────────────────────
 function getApiKey() {
   return localStorage.getItem('buddy_api_key') || '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';
@@ -1260,6 +1261,7 @@ function safeParseJSON(raw) {
 }
 async function callClaude(prompt, maxTokens) {
   maxTokens = maxTokens || 1000;
+  console.log("callClaude: max_tokens=" + maxTokens + " prompt_len=" + prompt.length);
   var key = getApiKey();
   var headers = {
     "Content-Type": "application/json",
@@ -1558,7 +1560,7 @@ function startListening() {
         if (e.results[i].isFinal) final_ += e.results[i][0].transcript;else interim += e.results[i][0].transcript;
       }
       S.transInterim = interim;
-      if (final_) processTranslation(final_);
+      if (final_) processTranslation(final_).catch(function(e){ console.error("Translation error:", e); });
       r();
     };
     rec.onend = function () {
@@ -1603,7 +1605,7 @@ async function processTranslation(text) {
   r();
   var lang = cityLang();
   try {
-    var raw = await callClaude('Translate this text. Detect the language.\nText: "' + text + '"\nIf English: translate to ' + lang + '.\nIf NOT English: translate to English.\nReturn ONLY JSON (no markdown): {"detectedLang":"English","direction":"out","translated":"translation"}\ndirection is "out" if input was English, "in" if input was other language.', 300);
+    var raw = await callClaude('Detect the language of this text and translate it.\nText: "' + text + '"\nRules: If input is English, translate to ' + lang + ' (direction="out"). If input is ' + lang + ' or other language, translate to English (direction="in").\nRespond ONLY with this JSON: {"detectedLang":"English","direction":"out","translated":"your translation here"}', 300);
     var d = safeParseJSON(raw);
     if (!d) throw new Error("Parse failed");
     S.transHistory.push({
@@ -2073,8 +2075,8 @@ async function genIti() {
     S.itiResult = safeParseJSON(raw);
   } catch (e) {
     S.itiResult = {
-      title: "Try again",
-      intro: "Something went wrong.",
+      title: 'Error',
+      intro: e && e.message ? e.message : 'Something went wrong - try again.',
       stops: []
     };
   }
