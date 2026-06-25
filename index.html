@@ -23,57 +23,28 @@ html,body{height:100%;background:#F0EBF8 !important;color:#1A0820 !important;fon
   --cdim:#3D2455;--muted:#7A6888;--mdim:#B0A0C0;--live:#0DAB8E;--blue:#2E7A9A;
   --sidebar-w:58px;--sidebar-open:200px;
 }
-/* APP SHELL - leaves room for sidebar */
+/* APP SHELL */
 .app{
-  position:fixed;top:0;bottom:0;
-  left:var(--sidebar-w);right:0;
+  position:fixed;top:0;bottom:0;left:0;right:0;
   background:#FFFFFF !important;
   display:flex;flex-direction:column;
   overflow:hidden;
-  transition:left .25s ease;
+  max-width:480px;
+  margin:0 auto;
 }
-@media(min-width:700px){
-  .app{max-width:430px;left:50%;transform:translateX(calc(-50% + var(--sidebar-w)/2));}
+@media(min-width:500px){
+  .app{box-shadow:0 0 40px rgba(0,0,0,.12);}
 }
 
-/* SIDEBAR */
+/* BOTTOM NAV */
 .sidebar{
-  position:fixed;top:0;bottom:0;left:0;
-  width:var(--sidebar-w);
-  background:#F7F3FB !important;
-  border-right:1px solid var(--line);
-  display:flex;flex-direction:column;
-  align-items:center;
-  z-index:100;
-  transition:width .25s ease;
-  overflow:hidden;
-  box-shadow:2px 0 12px rgba(0,0,0,.06);
+  display:none; /* hidden - replaced by bottom nav in renderMain */
 }
-.sidebar.open{width:var(--sidebar-open);}
-.sidebar-toggle{
-  width:44px;height:44px;border-radius:50%;
-  background:var(--garnet);
-  border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  margin:16px auto 8px;
-  flex-shrink:0;
-  box-shadow:0 4px 14px rgba(192,53,70,.35);
-  color:#fff;font-size:18px;
-}
-.nav-item{
-  width:100%;display:flex;align-items:center;gap:12px;
-  padding:10px 0 10px 18px;
-  border:none;background:none;cursor:pointer;
-  font-family:'Manrope',sans-serif;font-size:13px;font-weight:600;
-  color:var(--muted);white-space:nowrap;
-  border-left:3px solid transparent;
-  transition:color .15s, border-color .15s, background .15s;
-}
-.nav-item.active{color:var(--garnet);border-left-color:var(--garnet);background:rgba(192,53,70,.06);}
-.nav-item:hover{background:var(--panel2);color:var(--cream);}
-.nav-icon{font-size:20px;flex-shrink:0;width:28px;text-align:center;}
-.nav-label{opacity:0;transition:opacity .2s;pointer-events:none;}
-.sidebar.open .nav-label{opacity:1;}
+/* top nav tabs - rendered inline by renderTopNav() */
+.nav-item{border:none;background:none;cursor:pointer;}
+.nav-item.active{color:var(--garnet);}
+.nav-icon{font-size:19px;line-height:1;}
+.nav-label{font-size:9.5px;font-weight:700;letter-spacing:.06em;}
 
 /* MAIN SCROLL */
 #mainBody{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;min-height:0;padding:14px;}
@@ -113,11 +84,6 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </style>
 </head>
 <body>
-<div class="sidebar" id="sidebar">
-  <button class="sidebar-toggle" onclick="toggleSidebar()" title="Menu">☰</button>
-  <div style="width:100%;margin-top:4px;flex:1;display:flex;flex-direction:column;gap:2px;">
-  </div>
-</div>
 <div class="app" id="app"></div>
 
 <script>console.log("Buddy v4 loaded OK");
@@ -1326,24 +1292,13 @@ function r() {
   bindAfterRender();
 }
 function rebuildSidebar() {
-  var sidebar = document.getElementById("sidebar");
-  if (!sidebar) return;
-  var tabs = [["explore", "✦", "Explore"], ["map", "◉", "Map"], ["saved", "♥", "Saved"], ["plan", "☰", "Plan"], ["chat", "✉", "Chat"], ["you", "◍", "You"]];
-  var inner = sidebar.querySelector('div');
-  if (!inner) return;
-  inner.innerHTML = tabs.map(function (t) {
-    var k = t[0],
-      ic = t[1],
-      lab = t[2];
-    var active = S.started && S.profileDone && S.tab === k ? "active" : "";
-    return '<button class="nav-item ' + active + '" data-tab="' + k + '" onclick="switchTabEl(this)"><span class="nav-icon">' + ic + '</span><span class="nav-label">' + lab + '</span></button>';
-  }).join("");
+  var items = document.querySelectorAll('.nav-item[data-tab]');
+  items.forEach(function(btn) {
+    var k = btn.getAttribute('data-tab');
+    btn.classList.toggle('active', S.started && S.profileDone && S.tab === k);
+  });
 }
-function toggleSidebar() {
-  S.sidebarOpen = !S.sidebarOpen;
-  var sb = document.getElementById("sidebar");
-  if (sb) sb.classList.toggle("open", S.sidebarOpen);
-}
+function toggleSidebar() { /* sidebar replaced by bottom nav */ }
 
 // ── ONBOARD ───────────────────────────────────────────────────────────────────
 function renderOnboard() {
@@ -1494,7 +1449,7 @@ async function switchCity(key) {
     r();
   } catch (e) {
     S.cityLoadError = true;
-    S.cityLoadMsg = e && e.message ? e.message : String(e);
+    S.cityLoadMsg = e && e.message ? e.message : 'Unknown error - check proxy';
     r();
   }
 }
@@ -1630,6 +1585,59 @@ async function processTranslation(text) {
 }
 
 // ── MAIN SHELL ────────────────────────────────────────────────────────────────
+
+
+function testAI() {
+  var btn = document.getElementById('aiTestBtn');
+  var out = document.getElementById('aiTestResult');
+  if (!btn || !out) return;
+  btn.textContent = 'Testing...';
+  btn.disabled = true;
+  out.style.color = 'var(--muted)';
+  out.textContent = 'Calling Google Apps Script proxy...';
+  callClaude('Say the word OK and nothing else.', 20)
+    .then(function(result) {
+      btn.textContent = 'Test AI';
+      btn.disabled = false;
+      out.style.color = 'var(--live)';
+      out.textContent = 'SUCCESS: ' + result.slice(0, 80);
+    })
+    .catch(function(err) {
+      btn.textContent = 'Test AI';
+      btn.disabled = false;
+      out.style.color = 'var(--garnet)';
+      out.textContent = 'FAILED: ' + (err && err.message ? err.message : String(err));
+    });
+}
+
+function renderTopNav() {
+  if (!S.started || !S.profileDone) return '';
+  var tabs = [
+    ['explore', 'Explore'],
+    ['map', 'Map'],
+    ['saved', 'Saved'],
+    ['plan', 'Plan'],
+    ['chat', 'Chat'],
+    ['you', 'You']
+  ];
+  return '<div style="display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--panel);border-bottom:2px solid var(--line);flex-shrink:0;scrollbar-width:none;">'
+    + tabs.map(function(t) {
+        var k = t[0], lab = t[1];
+        var isActive = S.tab === k;
+        return '<button data-tab="' + k + '" onclick="switchTabEl(this)" style="'
+          + 'flex-shrink:0;padding:12px 18px;'
+          + 'border:none;border-bottom:3px solid ' + (isActive ? 'var(--garnet)' : 'transparent') + ';'
+          + 'background:none;'
+          + 'color:' + (isActive ? 'var(--garnet)' : 'var(--muted)') + ';'
+          + 'font-family:Syne,sans-serif;font-weight:' + (isActive ? '800' : '600') + ';'
+          + 'font-size:13px;cursor:pointer;white-space:nowrap;'
+          + 'transition:color .15s,border-color .15s;'
+          + '">' + lab + '</button>';
+      }).join('')
+    + '</div>';
+}
+
+
 function renderMain() {
   var m = meta();
   var hasCity = !!S.cityKey;
@@ -1638,6 +1646,9 @@ function renderMain() {
 
   // SHAZAM STEP BAR
   + '<div style="display:flex;align-items:center;background:var(--panel);border-bottom:2px solid var(--line);padding:0 14px;height:44px;flex-shrink:0;gap:10px;">' + '<div onclick="toggleSteps()" style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0;">' + '<div style="display:flex;align-items:flex-end;gap:2px;height:22px;flex-shrink:0;">' + (S.stepsActive ? '<div style="width:3px;background:var(--live);border-radius:2px;animation:wave .7s ease-in-out 0s infinite;height:8px;"></div><div style="width:3px;background:var(--live);border-radius:2px;animation:wave .7s ease-in-out .12s infinite;height:8px;"></div><div style="width:3px;background:var(--live);border-radius:2px;animation:wave .7s ease-in-out .24s infinite;height:8px;"></div><div style="width:3px;background:var(--live);border-radius:2px;animation:wave .7s ease-in-out .36s infinite;height:8px;"></div><div style="width:3px;background:var(--live);border-radius:2px;animation:wave .7s ease-in-out .48s infinite;height:8px;"></div>' : '<div style="width:3px;height:6px;background:var(--mdim);border-radius:2px;"></div><div style="width:3px;height:14px;background:var(--mdim);border-radius:2px;"></div><div style="width:3px;height:9px;background:var(--mdim);border-radius:2px;"></div><div style="width:3px;height:16px;background:var(--mdim);border-radius:2px;"></div><div style="width:3px;height:11px;background:var(--mdim);border-radius:2px;"></div>') + '</div>' + '<div style="min-width:0;">' + '<div id="stepCount" style="font-size:13px;color:var(--cream);font-weight:700;line-height:1.2;">' + S.steps.toLocaleString() + ' <span style="font-weight:400;font-size:11px;">steps</span></div>' + '<div style="font-size:9.5px;color:var(--muted);line-height:1.2;">' + stepsKm + ' km &nbsp;·&nbsp; ' + (S.stepsActive ? '<span style="color:var(--live);font-weight:600;">tracking</span>' : 'tap to start') + '</div>' + '</div></div>' + '<button onclick="S.transOpen=true;r()" style="background:linear-gradient(90deg,var(--sap),var(--garnet));border:none;border-radius:999px;padding:6px 14px;color:#FFFFFF;font-weight:700;font-size:11.5px;white-space:nowrap;cursor:pointer;flex-shrink:0;letter-spacing:.02em;">🌐 Translate</button>' + '</div>'
+
+  // TOP NAV
+  + renderTopNav()
 
   // HEADER
   + '<div style="padding:11px 16px 9px;border-bottom:1px solid var(--line);background:var(--panel);flex-shrink:0;">' + '<div style="display:flex;justify-content:space-between;align-items:center;">' + '<div style="font-weight:800;font-size:20px;color:var(--cream);">Buddy <span style="color:var(--garnet);">✦</span></div>' + '<button onclick="S.showPicker=true;r()" style="display:flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid ' + (hasCity ? 'var(--garnet)' : 'var(--line)') + ';border-radius:999px;padding:6px 13px;cursor:pointer;">' + '<span style="font-size:14px;">' + (hasCity ? m.flag || '🌍' : '＋') + '</span>' + '<span style="font-size:12px;color:var(--cream);font-weight:600;">' + (hasCity ? m.name || '...' : 'New trip') + '</span>' + '<span style="font-size:9px;color:var(--muted);">▾</span>' + '</button>' + '</div>' + '</div>'
@@ -1669,8 +1680,9 @@ function renderExplore() {
     });
     if (!sp) return '';
     return '<div style="background:var(--panel2);border:1px solid var(--garnet);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;">' + '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--cream);">' + escH(sp.name) + '</div>' + '<div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4;">' + escH(match.reason) + '</div></div>' + '<span style="flex-shrink:0;font-size:9px;background:var(--sap);color:#fff;border-radius:999px;padding:3px 8px;font-weight:800;height:fit-content;">AI</span>' + '</div>';
-  }).join('') + '<button onclick="clearVibe()" style="background:none;border:none;color:var(--muted);font-size:11.5px;cursor:pointer;font-family:inherit;padding:2px 0;">clear ×</button>' + '</div>' : '') + '</div>' + '<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;">' + tr.map(function (t) {
-    return '<button data-f="' + t + '" onclick="setFilter(this,false)" style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid ' + (S.filter === t ? 'var(--garnet)' : 'var(--line)') + ';background:' + (S.filter === t ? 'var(--sap)' : 'transparent') + ';color:' + (S.filter === t ? '#FFFFFF' : 'var(--muted)') + ';">' + t + '</button>';
+  }).join('') + '<button onclick="clearVibe()" style="background:none;border:none;color:var(--muted);font-size:11.5px;cursor:pointer;font-family:inherit;padding:2px 0;">clear ×</button>' + '</div>' : '') + '</div>' + '<div style="display:flex;gap:7px;overflow-x:auto;padding:0 0 12px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none;">' + tr.map(function (t) {
+    var isActive = S.filter === t;
+    return '<button data-f="' + t + '" onclick="setFilter(this,false)" style="flex-shrink:0;padding:8px 18px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.01em;transition:all .15s;border:2px solid ' + (isActive ? 'var(--garnet)' : 'var(--line)') + ';background:' + (isActive ? 'var(--garnet)' : 'var(--panel)') + ';color:' + (isActive ? '#FFFFFF' : 'var(--muted)') + ';box-shadow:' + (isActive ? '0 2px 8px rgba(192,53,70,.3)' : 'none') + ';">' + t + '</button>';
   }).join('') + '</div>' + shown.map(function (s) {
     var h = s.heat[S.timeIdx];
     var isOpen = S.openSpot === s.id;
@@ -1721,11 +1733,9 @@ function initMap() {
       attributionControl: true,
       tap: false
     }).setView(center, 14);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; <a href="https://openstreetmap.org">OSM</a> &copy; <a href="https://carto.com">CARTO</a>',
-      subdomains: "abcd",
-      maxZoom: 20,
-      detectRetina: true
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
     }).addTo(map);
     S.mapInstance = map;
     S.mapInited = true;
@@ -1899,7 +1909,8 @@ function renderYou() {
   // API key
   + '<div style="background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;">' + '<div style="font-size:12px;font-weight:700;color:var(--cream);margin-bottom:4px;">🔑 Anthropic API Key</div>' + '<div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.5;">Override the built-in key if needed. Get one at <a href="https://console.anthropic.com" target="_blank" style="color:var(--garnet);">console.anthropic.com</a></div>' + '<div style="display:flex;gap:8px;">' + '<input id="apiKeyInput" type="password" placeholder="sk-ant-..." value="' + escH(localStorage.getItem('buddy_api_key') || '') + '" style="flex:1;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:9px 14px;color:var(--cream);font-size:12.5px;"/>' + '<button onclick="saveApiKey()" style="background:linear-gradient(90deg,var(--sap),var(--garnet));border:none;border-radius:999px;padding:0 16px;color:#FFFFFF;font-weight:700;font-size:12.5px;cursor:pointer;flex-shrink:0;">Save</button>' + '</div>' + '<div id="apiKeyStatus" style="margin-top:8px;font-size:11px;color:var(--live);">✓ Built-in key active</div>' + '</div>'
   // Powered by
-  + '<div style="background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;">' + '<div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;font-weight:700;">Powered by</div>' + '<div style="font-size:12px;color:var(--muted);line-height:1.9;">🤖 Claude Sonnet 4.6<br/>🗺 OpenStreetMap & CARTO light tiles<br/>🌐 Anthropic API · real-time translation</div>' + '</div>' + '</div>';
+  + '<div style="background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;">' + '<div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;font-weight:700;">Powered by</div>' + '<div style="font-size:12px;color:var(--muted);line-height:1.9;">🤖 Claude Sonnet 4.6<br/>🗺 OpenStreetMap & CARTO light tiles<br/>🌐 Anthropic API · real-time translation</div>' + '</div>'
+    + '<button id="aiTestBtn" onclick="testAI()" style="margin-top:10px;width:100%;padding:11px;border-radius:10px;border:1px solid var(--garnet);background:none;color:var(--garnet);font-weight:700;font-size:13px;cursor:pointer;">Test AI Connection</button>'+ '<div id="aiTestResult" style="margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5;">Tap to test if AI features are working</div>' + '</div>';
 }
 
 // ── EMPTY STATE ───────────────────────────────────────────────────────────────
@@ -2155,29 +2166,4 @@ function cancelAddPlanEl(el) {
   r();
 }
 function startAddPlanEl(el) {
-  S.addingPlan[el.getAttribute('data-day')] = true;
-  r();
-}
-function toggleListening() {
-  if (S.transListening) stopListening();else startListening();
-}
-function switchTabEl(el) {
-  switchTab(el.getAttribute('data-tab'));
-}
-function selectProfileEl(el) {
-  selectProfileOpt(el.getAttribute('data-qid'), el.getAttribute('data-opt'));
-}
-function toggleDoneEl(el) {
-  toggleDone(el.getAttribute('data-done'));
-}
-function remMemberEl(el) {
-  remMember(+el.getAttribute('data-gid'), el.getAttribute('data-mem'));
-}
-window.addEventListener("devicemotion", handleMotion, {
-  passive: true
-});
-r();
-
-</script>
-</body>
-</html>
+  S.addingPlan[el.getAttribute('
