@@ -25,12 +25,11 @@ html,body{height:100%;background:#F0EBF8 !important;color:#1A0820 !important;fon
 }
 /* APP SHELL */
 .app{
-  position:fixed;top:0;bottom:0;left:0;right:0;
+  position:fixed;top:0;bottom:0;
+  left:0;right:0;
   background:#FFFFFF !important;
   display:flex;flex-direction:column;
   overflow:hidden;
-  max-width:480px;
-  margin:0 auto;
 }
 @media(min-width:500px){
   .app{box-shadow:0 0 40px rgba(0,0,0,.12);}
@@ -86,7 +85,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 <body>
 <div class="app" id="app"></div>
 
-<script>console.log("Buddy v4 loaded OK");
+<script>console.log("Buddy v4 loaded OK")console.log("Buddy v4 loaded OK");
 
 // ── API KEY ───────────────────────────────────────────────────────────────────
 function getApiKey() {
@@ -1946,7 +1945,7 @@ function handleMotion(e) {
   if (!S.stepsActive) return;
   var a = e.accelerationIncludingGravity;
   if (!a) return;
-  var mag = Math.sqrt((a.x || 0) ** 2 + (a.y || 0) ** 2 + (a.z || 0) ** 2);
+  var mag = Math.sqrt(Math.pow(a.x||0,2) + Math.pow(a.y||0,2) + Math.pow(a.z||0,2));
   var now = Date.now();
   if (S.lastAccMag !== null && mag > 12 && now - S.stepCooldown > 400) {
     S.steps++;
@@ -2166,4 +2165,26 @@ function cancelAddPlanEl(el) {
   r();
 }
 function startAddPlanEl(el) {
-  S.addingPlan[el.getAttribute('
+  S.addingPlan[el.getAttribute('data-day')] = true;
+  r();
+}
+function toggleListening() {
+  if (S.transListening) stopListening();else startListening();
+}
+function switchTabEl(el) {
+  switchTab(el.getAttribute('data-tab'));
+}
+function selectProfileEl(el) {
+  selectProfileOpt(el.getAttribute('data-qid'), el.getAttribute('data-opt'));
+}
+function toggleDoneEl(el) {
+  toggleDone(el.getAttribute('data-done'));
+}
+function remMemberEl(el) {
+  remMember(+el.getAttribute('data-gid'), el.getAttribute('data-mem'));
+}
+window.addEventListener("devicemotion", handleMotion, {
+  passive: true
+});
+r();
+
